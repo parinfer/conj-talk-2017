@@ -57,7 +57,7 @@
 (defn node->cam-rect [{:keys [xy text paren]}]
   (let [[x y] (code->cam xy)
         w (* char-w (if paren 1 (count text)))
-        h char-h]
+        h (+ char-h char-padh)]
     [x y w h]))
 
 (defn inside-rect? [[mx my] [x y w h]]
@@ -84,7 +84,6 @@
             (draw-text (close-paren paren) xy-end)
             (run! draw-node children))
     text (draw-text text xy)))
-
 
 (defn draw-editor []
   (ocall ctx "fillText"
