@@ -9,7 +9,24 @@
 (def mx 0)
 (def my 0)
 
-(defn draw [])
+; code example from page 54 of BBN manual:
+; https://github.com/shaunlebron/history-of-lisp-parens/blob/master/papers/656771.pdf
+(def code
+ "
+ (LAMBDA (X Y)
+   (COND
+     ((NUL X) Z)
+     (T (CONS
+          (CAR X)
+          (APPEND (CDR X) Y)))))
+")
+
+(def tree (read code))
+
+(defn draw-code [])
+
+(defn draw []
+  (draw-code))
 
 (defn on-mouse-down [e])
 
