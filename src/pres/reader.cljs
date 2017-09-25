@@ -9,16 +9,16 @@
 (defn public-path [path]
   (subvec (vec (remove #{:children} path)) 1))
 
-(defn list-node [paren xy path]
+(defn list-node [paren xy path i]
   {:paren paren
    :xy xy
    :children []
-   :path (public-path path)})
+   :path (conj (public-path path) i)})
 
-(defn atom-node [text xy path]
+(defn atom-node [text xy path i]
   {:xy xy
    :text text
-   :path (public-path path)})
+   :path (conj (public-path path) i)})
 
 (defn skip-space [{:keys [xy text] :as state}]
   (let [[x y] xy
@@ -32,7 +32,8 @@
   (let [word (re-find #"[^\s\(\{\[\]\}\)]+" text)
         dx (count word)
         [x y] xy
-        node (atom-node word xy path)]
+        i (count (get-in nodes (conj path :children)))
+        node (atom-node word xy path i)]
     (assoc state
       :xy [(+ x dx) y]
       :text (subs text dx)
@@ -44,17 +45,17 @@
 (defn on-paren [{:keys [xy text nodes path] :as state}]
   (let [[char] text
         open (opener? char)
+        i (count (get-in nodes (conj path :children)))
         [x y] xy]
     (assoc state
       :text (subs text 1)
       :xy [(inc x) y]
       :nodes (if open
-               (update-in nodes (conj path :children) conj (list-node char xy path))
+               (update-in nodes (conj path :children) conj (list-node char xy path i))
                (assoc-in nodes (conj path :xy-end) xy))
       :path (if open
-              (let [i (count (get-in nodes (conj path :children)))]
-                (vec (concat path [:children i])))
-              (subvec path 0 (- (count path) 2))))))
+               (vec (concat path [:children i]))
+               (subvec path 0 (- (count path) 2))))))
 
 (defn read-next [state]
   (let [state (skip-space state)

@@ -85,13 +85,13 @@
             (run! draw-node children))
     text (draw-text text xy)))
 
+(defn debug-node-str [node]
+  (str (pr-str (:path node)) ":" (or (:paren node) (:text node))))
+
 (defn draw-editor []
-  (ocall ctx "fillText"
-    (pr-str (get-in @state [:bbn :current-node :path]))
-    0 0)
-  (ocall ctx "fillText"
-    (pr-str (get-in @state [:bbn :hover-node :path]))
-    0 20))
+  (let [node (get-in @state [:bbn :current-node])
+        hover (get-in @state [:bbn :hover-node])]
+    (ocall ctx "fillText" (debug-node-str hover) 0 0)))
 
 (defn draw []
   (set-font!)
