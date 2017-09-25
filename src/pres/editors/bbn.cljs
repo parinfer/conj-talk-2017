@@ -1,4 +1,4 @@
-(ns pres.editor-bbn
+(ns pres.editors.bbn
   (:require
     [pres.canvas :refer [ctx]]
     [pres.reader :refer [read]]
