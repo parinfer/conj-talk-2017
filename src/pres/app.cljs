@@ -21,3 +21,5 @@
 
 (oset! js/document "body.onresize" on-resize)
 (on-resize)
+
+(bbn/init!)

@@ -30,3 +30,7 @@
   (oset! ctx "strokeStyle" "#555")
   (ocall ctx "strokeRect" 0 0 w h)
   (ocall ctx "setLineDash" #js []))
+
+(defn mouse-pos [e]
+  [(/ (- (oget e "offsetX") x) scale)
+   (/ (- (oget e "offsetY") y) scale)])
