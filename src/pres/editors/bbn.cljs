@@ -23,36 +23,49 @@
 
 (def tree (read code))
 
-(def code-x 800)
+(def code-x 580)
 (def code-y 200)
 
 ;; character size and padding
 (def char-h 20)
 (def char-w nil)
-(def char-padh 4)
+(def char-padh 8)
 
 (defn set-font! []
   (oset! ctx "font" (str char-h "px monospace")))
 
 (defn calc-char-size! []
-  (set-font!)
   (let [text "abcdef"
         text-width (oget (ocall ctx "measureText" text) "width")]
-    (set! char-w (/ text-width (count text)))
-    (println char-w)))
+    (set! char-w (/ text-width (count text)))))
 
-(defn code-xy [[x y]]
+(defn code-pos [[x y]]
   [(+ code-x (* x char-w))
    (+ code-y (* y (+ char-h char-padh)))])
 
-(defn draw-code [node]
-  (set-font!)
-  (ocall ctx "fillText" "foobar" code-x code-y))
+(defn draw-text [text pos]
+  (let [[x y] (code-pos pos)]
+    (ocall ctx "fillText" text x y)))
+
+(def close-paren
+  {"(" ")"
+   "{" "}"
+   "[" "]"})
+
+(defn draw-node [{:keys [paren text xy xy-end children]}]
+  (cond
+    paren (do
+            (draw-text paren xy)
+            (draw-text (close-paren paren) xy-end)
+            (doseq [child children]
+              (draw-node child)))
+    text (draw-text text xy)))
 
 (defn draw []
+  (set-font!)
   (when (nil? char-w)
     (calc-char-size!))
-  (draw-code tree))
+  (draw-node tree))
 
 (defn on-mouse-down [e])
 

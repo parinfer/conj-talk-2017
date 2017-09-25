@@ -2,18 +2,18 @@
 
 (defn init-state [text]
   {:xy [0 0]
-   :nodes [{:type :root, :value []}]
+   :nodes [{:paren :root, :children []}]
    :path [0]
    :text text})
 
 (defn list-node [paren xy]
-  {:type paren
+  {:paren paren
    :xy xy
-   :value []})
+   :children []})
 
 (defn atom-node [text xy]
   {:xy xy
-   :value text})
+   :text text})
 
 (defn skip-space [{:keys [xy text] :as state}]
   (let [[x y] xy
@@ -31,7 +31,7 @@
     (assoc state
       :xy [(+ x dx) y]
       :text (subs text dx)
-      :nodes (update-in nodes (conj path :value) conj node))))
+      :nodes (update-in nodes (conj path :children) conj node))))
 
 (def paren? #{"(" "{" "[" "]" "}" ")"})
 (def opener? #{"(" "{" "["})
@@ -44,11 +44,11 @@
       :text (subs text 1)
       :xy [(inc x) y]
       :nodes (if open
-               (update-in nodes (conj path :value) conj (list-node char xy))
+               (update-in nodes (conj path :children) conj (list-node char xy))
                (assoc-in nodes (conj path :xy-end) xy))
       :path (if open
-              (let [i (count (get-in nodes (conj path :value)))]
-                (vec (concat path [:value i])))
+              (let [i (count (get-in nodes (conj path :children)))]
+                (vec (concat path [:children i])))
               (subvec path 0 (- (count path) 2))))))
 
 (defn read-next [state]
@@ -67,4 +67,4 @@
 
 (defn read [text]
   (-> (read* text)
-      (get-in [:nodes 0 :value 0]))) ;; assume a top-level list
+      (get-in [:nodes 0 :children 0]))) ;; assume a top-level list
