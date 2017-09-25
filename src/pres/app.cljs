@@ -1,3 +1,4 @@
-(ns pres.app)
+(ns pres.app
+  (:require pres.reader))
 
 (println "Hello World")
