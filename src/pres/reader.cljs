@@ -73,3 +73,6 @@
 (defn read [text]
   (-> (read* text)
       (get-in [:nodes 0 :children 0]))) ;; assume a top-level list
+
+(defn walk [node]
+  (cons node (flatten (map walk (:children node)))))

@@ -31,6 +31,6 @@
   (ocall ctx "strokeRect" 0 0 w h)
   (ocall ctx "setLineDash" #js []))
 
-(defn mouse-pos [e]
+(defn mouse->cam [e]
   [(/ (- (oget e "offsetX") x) scale)
    (/ (- (oget e "offsetY") y) scale)])

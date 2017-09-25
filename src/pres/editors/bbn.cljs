@@ -1,13 +1,12 @@
 (ns pres.editors.bbn
   (:require
     [pres.canvas :refer [ctx]]
-    [pres.camera :refer [mouse-pos]]
-    [pres.reader :refer [read]]
+    [pres.camera :refer [mouse->cam]]
+    [pres.reader :refer [read walk]]
     [pres.state :refer [state]]
     [oops.core :refer [ocall oget oset!]]))
 
-(def mx 0)
-(def my 0)
+(def close-paren {"(" ")" "{" "}" "[" "]"})
 
 ; code example from page 54 of BBN manual:
 ; https://github.com/shaunlebron/history-of-lisp-parens/blob/master/papers/656771.pdf
@@ -21,10 +20,13 @@
           (APPEND (CDR X) Y)))))
 ")
 
-(def tree (read code))
 
-(def code-x 580)
-(def code-y 200)
+(def tree (read code))
+(def nodes (walk tree))
+
+;;----------------------------------------------------------------------
+;; Font drawing
+;;----------------------------------------------------------------------
 
 ;; character size and padding
 (def char-h 20)
@@ -32,25 +34,48 @@
 (def char-padh 8)
 
 (defn set-font! []
-  (oset! ctx "font" (str char-h "px monospace")))
+  (oset! ctx "font" (str char-h "px monospace"))
+  (oset! ctx "textBaseline" "top")
+  (oset! ctx "textAlign" "left"))
 
 (defn calc-char-size! []
   (let [text "abcdef"
         text-width (oget (ocall ctx "measureText" text) "width")]
     (set! char-w (/ text-width (count text)))))
 
-(defn code-pos [[x y]]
+;;----------------------------------------------------------------------
+;; Coordinates
+;;----------------------------------------------------------------------
+
+(def code-x 580)
+(def code-y 200)
+
+(defn code->cam [[x y]]
   [(+ code-x (* x char-w))
    (+ code-y (* y (+ char-h char-padh)))])
 
-(defn draw-text [text pos]
-  (let [[x y] (code-pos pos)]
-    (ocall ctx "fillText" text x y)))
+(defn node->cam-rect [{:keys [xy text paren]}]
+  (let [[x y] (code->cam xy)
+        w (* char-w (if paren 1 (count text)))
+        h char-h]
+    [x y w h]))
 
-(def close-paren
-  {"(" ")"
-   "{" "}"
-   "[" "]"})
+(defn inside-rect? [[mx my] [x y w h]]
+  (and (<= x mx (+ x w))
+       (<= y my (+ y h))))
+
+(defn node-at [[x y]]
+  (->> nodes
+       (filter #(inside-rect? [x y] (node->cam-rect %)))
+       (first)))
+
+;;----------------------------------------------------------------------
+;; Drawing
+;;----------------------------------------------------------------------
+
+(defn draw-text [text pos]
+  (let [[x y] (code->cam pos)]
+    (ocall ctx "fillText" text x y)))
 
 (defn draw-node [{:keys [paren text xy xy-end children]}]
   (cond
@@ -60,18 +85,42 @@
             (run! draw-node children))
     text (draw-text text xy)))
 
+
+(defn draw-editor []
+  (ocall ctx "fillText"
+    (pr-str (get-in @state [:bbn :current-node :path]))
+    0 0)
+  (ocall ctx "fillText"
+    (pr-str (get-in @state [:bbn :hover-node :path]))
+    0 20))
+
 (defn draw []
   (set-font!)
   (when (nil? char-w)
     (calc-char-size!))
-  (draw-node tree))
+  (draw-node tree)
+  (draw-editor))
 
-(defn on-mouse-down [e])
+;;----------------------------------------------------------------------
+;; Mouse
+;;----------------------------------------------------------------------
+
+(defn on-mouse-down [e]
+  (let [[x y] (mouse->cam e)
+        node (node-at [x y])]
+    (when node
+      (swap! state assoc-in [:bbn :current-node] node))))
 
 (defn on-mouse-move [e]
-  (let [[x y] (mouse-pos e)]
-    (set! mx x)
-    (set! my y)))
+  (let [[x y] (mouse->cam e)
+        node (node-at [x y])
+        prev-node (get-in @state [:bbn :hover-node])]
+    (when-not (= node prev-node)
+      (swap! state assoc-in [:bbn :hover-node] node))))
+
+;;----------------------------------------------------------------------
+;; Load
+;;----------------------------------------------------------------------
 
 (defn init! []
   (ocall js/window "addEventListener" "mousedown" on-mouse-down)
