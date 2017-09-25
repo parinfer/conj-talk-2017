@@ -23,5 +23,10 @@
 
 (defn transform []
   (ocall ctx "translate" x y)
-  (ocall ctx "scale" scale scale)
-  (ocall ctx "strokeRect" 0 0 w h))
+  (ocall ctx "scale" scale scale))
+
+(defn draw-outline []
+  (ocall ctx "setLineDash" #js [5 5])
+  (oset! ctx "strokeStyle" "#555")
+  (ocall ctx "strokeRect" 0 0 w h)
+  (ocall ctx "setLineDash" #js []))

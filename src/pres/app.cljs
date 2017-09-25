@@ -10,6 +10,7 @@
   (canvas/transform)
   (canvas/clear)
   (camera/transform)
+  (camera/draw-outline)
   (bbn/draw)
   (ocall ctx "restore"))
 
