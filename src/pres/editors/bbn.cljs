@@ -23,10 +23,36 @@
 
 (def tree (read code))
 
-(defn draw-code [])
+(def code-x 800)
+(def code-y 200)
+
+;; character size and padding
+(def char-h 20)
+(def char-w nil)
+(def char-padh 4)
+
+(defn set-font! []
+  (oset! ctx "font" (str char-h "px monospace")))
+
+(defn calc-char-size! []
+  (set-font!)
+  (let [text "abcdef"
+        text-width (oget (ocall ctx "measureText" text) "width")]
+    (set! char-w (/ text-width (count text)))
+    (println char-w)))
+
+(defn code-xy [[x y]]
+  [(+ code-x (* x char-w))
+   (+ code-y (* y (+ char-h char-padh)))])
+
+(defn draw-code [node]
+  (set-font!)
+  (ocall ctx "fillText" "foobar" code-x code-y))
 
 (defn draw []
-  (draw-code))
+  (when (nil? char-w)
+    (calc-char-size!))
+  (draw-code tree))
 
 (defn on-mouse-down [e])
 
