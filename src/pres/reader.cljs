@@ -66,4 +66,5 @@
       (recur (read-next state)))))
 
 (defn read [text]
-  (:nodes (read* text)))
+  (-> (read* text)
+      (get-in [:nodes 0 :value 0]))) ;; assume a top-level list
