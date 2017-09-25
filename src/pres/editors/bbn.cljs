@@ -57,8 +57,7 @@
     paren (do
             (draw-text paren xy)
             (draw-text (close-paren paren) xy-end)
-            (doseq [child children]
-              (draw-node child)))
+            (run! draw-node children))
     text (draw-text text xy)))
 
 (defn draw []

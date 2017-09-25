@@ -6,14 +6,19 @@
    :path [0]
    :text text})
 
-(defn list-node [paren xy]
+(defn public-path [path]
+  (subvec (vec (remove #{:children} path)) 1))
+
+(defn list-node [paren xy path]
   {:paren paren
    :xy xy
-   :children []})
+   :children []
+   :path (public-path path)})
 
-(defn atom-node [text xy]
+(defn atom-node [text xy path]
   {:xy xy
-   :text text})
+   :text text
+   :path (public-path path)})
 
 (defn skip-space [{:keys [xy text] :as state}]
   (let [[x y] xy
@@ -27,7 +32,7 @@
   (let [word (re-find #"[^\s\(\{\[\]\}\)]+" text)
         dx (count word)
         [x y] xy
-        node (atom-node word xy)]
+        node (atom-node word xy path)]
     (assoc state
       :xy [(+ x dx) y]
       :text (subs text dx)
@@ -44,7 +49,7 @@
       :text (subs text 1)
       :xy [(inc x) y]
       :nodes (if open
-               (update-in nodes (conj path :children) conj (list-node char xy))
+               (update-in nodes (conj path :children) conj (list-node char xy path))
                (assoc-in nodes (conj path :xy-end) xy))
       :path (if open
               (let [i (count (get-in nodes (conj path :children)))]
