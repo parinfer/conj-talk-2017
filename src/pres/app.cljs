@@ -3,6 +3,7 @@
     [pres.canvas :as canvas :refer [ctx]]
     [pres.camera :as camera]
     [pres.editors.bbn :as bbn]
+    [pres.state :refer [state]]
     [oops.core :refer [ocall oget oset!]]))
 
 (defn draw []
@@ -23,3 +24,5 @@
 (on-resize)
 
 (bbn/init!)
+
+(add-watch state :repaint draw)
