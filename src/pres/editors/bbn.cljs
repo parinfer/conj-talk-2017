@@ -8,21 +8,15 @@
 
 (def mx 0)
 (def my 0)
-(def r 5)
 
-(defn draw []
-  (let [[x y] (get-in @state [:bbn :xy])]
-    (ocall ctx "beginPath")
-    (ocall ctx "ellipse" x y r r 0 0 (* 2 Math/PI))
-    (ocall ctx "fill")))
+(defn draw [])
 
 (defn on-mouse-down [e])
 
 (defn on-mouse-move [e]
   (let [[x y] (mouse-pos e)]
     (set! mx x)
-    (set! my y)
-    (swap! state assoc-in [:bbn :xy] [x y])))
+    (set! my y)))
 
 (defn init! []
   (ocall js/window "addEventListener" "mousedown" on-mouse-down)
