@@ -9,28 +9,48 @@
 
 (def close-paren {"(" ")" "{" "}" "[" "]"})
 
+;;----------------------------------------------------------------------
+;; Printing
+;;----------------------------------------------------------------------
+
+(defn print-node* [{:keys [children paren text]} depth]
+  (if paren
+    (if (zero? depth)
+      "&"
+      (str paren
+           (string/join " " (map #(print-node* % (dec depth)) children))
+           (close-paren paren)))
+    text))
+
+(defn print-node [node]
+  (print-node* node 2))
+
+;;----------------------------------------------------------------------
+;; Codeboxes
+;;----------------------------------------------------------------------
+
 ; code example from page 54 of BBN manual:
 ; https://github.com/shaunlebron/history-of-lisp-parens/blob/master/papers/656771.pdf
-(def full-code-string
- "
+(def box-full (codebox/make "
  (lambda (x y)
    (cond
      ((nul x) z)
      (t (cons
           (car x)
           (append (cdr x) y)))))
-")
+" [580 200]))
 
-(def full-code
-  (codebox/make full-code-string [580 200]))
+(def top-node (:tree box-full))
 
-(def editor-x 100)
-(def editor-y 400)
+(def box-active)
+(defn set-box-active! [node]
+  (set! box-active (codebox/make (print-node node) [100 400])))
+
+(set-box-active! top-node)
 
 (def init-state
-  (let [top (:tree full-code)]
-    {:history [{:nav [] :node top}]
-     :current-node top}))
+  {:history [{:nav [] :node top-node}]
+   :current-node top-node})
 
 ;;----------------------------------------------------------------------
 ;; State
@@ -38,6 +58,7 @@
 
 (def key- :bbn)
 (def key-hover [key- :hover-node])
+(def key-hover-box [key- :hover-box])
 (def key-curr [key- :current-node])
 (def key-history [key- :history])
 (def key-nav [key- :nav])
@@ -67,28 +88,6 @@
     (path->nav to)))
 
 ;;----------------------------------------------------------------------
-;; Printing
-;;----------------------------------------------------------------------
-
-(defn print-node* [{:keys [children paren text]} depth]
-  (if paren
-    (if (zero? depth)
-      "&"
-      (str paren
-           (string/join " " (map #(print-node* % (dec depth)) children))
-           (close-paren paren)))
-    text))
-
-(defn print-node [node]
-  (print-node* node 2))
-
-(defn pick-node [code [x y]]
-  (->> (codebox/pick-nodes code [x y])
-       (filter :paren)
-       (sort-by #(count (:path %)))
-       (last)))
-
-;;----------------------------------------------------------------------
 ;; Draw Editor
 ;;----------------------------------------------------------------------
 
@@ -100,13 +99,14 @@
         hover (get-in @state key-hover)
         nav (get-in @state key-nav)
         history (get-in @state key-history)
-        line-h codebox/line-h]
+        line-h codebox/line-h
+        [x y] (:xy box-active)]
     (ocall ctx "save")
-    (ocall ctx "translate" editor-x editor-y)
+    (codebox/set-font!)
+    (ocall ctx "translate" (- x codebox/char-w) (+ y (* 2.5 line-h)))
     (oset! ctx "globalAlpha" 0.6)
     (ocall ctx "fillText" (str "*" (when nav (print-cmd nav))) 0 0)
     (ocall ctx "fillText" (str " " (when hover (print-node hover))) 0 line-h)
-    (ocall ctx "fillText" (str " " (when curr (print-node curr))) 0 (* -2 line-h))
     (oset! ctx "globalAlpha" 0.3)
     (doseq [{:keys [nav node]} (take 4 (reverse history))]
       (ocall ctx "translate" 0 (* -3 line-h))
@@ -115,7 +115,7 @@
     (ocall ctx "restore")))
 
 (defn draw-code-window []
-  (let [x (- (:x full-code) 20)
+  (let [x (- (:x box-full) 20)
         w (- camera/w x)]
     (oset! ctx "fillStyle" "#F5F5F5")
     (ocall ctx "fillRect" x 0 w camera/h)
@@ -133,15 +133,17 @@
 (defn draw []
   (draw-code-window)
   (when-let [node (get-in @state key-hover)]
-    (codebox/draw-region full-code node)
-    (oset! ctx "strokeStyle" "#000")
-    (ocall ctx "stroke"))
+    (when-let [box (get-in @state key-hover-box)]
+      (codebox/draw-region box node)
+      (oset! ctx "strokeStyle" "#000")
+      (ocall ctx "stroke")))
   (oset! ctx "fillStyle" "#CCD")
-  (codebox/draw full-code)
+  (codebox/draw box-full)
   (when-let [node (get-in @state key-curr)]
     (oset! ctx "fillStyle" "#333")
-    (codebox/draw full-code node))
+    (codebox/draw box-full node))
   (draw-editor)
+  (codebox/draw box-active)
   (draw-cursor))
 
 ;;----------------------------------------------------------------------
@@ -153,18 +155,32 @@
         hover (get-in @state key-hover)
         nav (get-in @state key-nav)]
     (when hover
+      (set-box-active! hover)
       (swap! state update-in key-history conj {:nav nav :node hover})
       (swap! state assoc-in key-curr hover)
       (swap! state assoc-in key-hover nil)
       (swap! state assoc-in key-nav nil))))
 
+(defn pick-node [code [x y]]
+  (->> (codebox/pick-nodes code [x y])
+       (filter :paren)
+       (sort-by #(count (:path %)))
+       (last)))
+
 (defn on-mouse-move [e]
   (let [[x y] (mouse->cam e)
-        hover (pick-node full-code [x y])
+        hover-full (pick-node box-full [x y])
+        hover-active (pick-node box-active [x y])
+        hover (or hover-full hover-active)
+        hover-box (cond
+                    hover-full box-full
+                    hover-active box-active
+                    :else nil)
         curr (get-in @state key-curr)
-        prev-hover (get-in @state key-hover)]
-    (when-not (= hover prev-hover)
+        hover-prev (get-in @state key-hover)]
+    (when-not (= hover hover-prev)
       (swap! state assoc-in key-hover hover)
+      (swap! state assoc-in key-hover-box hover-box)
       (swap! state assoc-in key-nav
         (when hover
           (path-diff (:path curr) (:path hover)))))))
