@@ -13,12 +13,12 @@
 ; https://github.com/shaunlebron/history-of-lisp-parens/blob/master/papers/656771.pdf
 (def code-string
  "
- (LAMBDA (X Y)
-   (COND
-     ((NUL X) Z)
-     (T (CONS
-          (CAR X)
-          (APPEND (CDR X) Y)))))
+ (lambda (x y)
+   (cond
+     ((nul x) z)
+     (t (cons
+          (car x)
+          (append (cdr x) y)))))
 ")
 
 (def code-lines (vec (.split code-string "\n")))
@@ -240,14 +240,14 @@
 
 (defmulti draw-area (fn [[name & coords]] name))
 (defmethod draw-area :rect [[_name x y w h]]
-  (ocall ctx "strokeRect" x y w h))
+  (ocall ctx "beginPath")
+  (ocall ctx "rect" x y w h))
 (defmethod draw-area :crect [[_name x0 y0 x1 y1 x2 y2]]
   (ocall ctx "beginPath")
   (ocall ctx "moveTo" x0 y0)
   (doseq [[x y] [[x2 y0] [x2 y2] [x1 y2] [x1 y1] [x0 y1]]]
     (ocall ctx "lineTo" x y))
-  (ocall ctx "closePath")
-  (ocall ctx "stroke"))
+  (ocall ctx "closePath"))
 
 (defn draw-code-window []
   (let [x (- code-x 20)
@@ -265,9 +265,15 @@
   (when (nil? char-w)
     (calc-char-size!))
   (draw-code-window)
-  (draw-node code-tree)
   (when-let [node (get-in @state key-hover)]
-    (draw-area (code-area->cam (node->area node))))
+    (draw-area (code-area->cam (node->area node)))
+    (oset! ctx "strokeStyle" "#000")
+    (ocall ctx "stroke"))
+  (oset! ctx "fillStyle" "#CCD")
+  (draw-node code-tree)
+  (when-let [node (get-in @state key-curr)]
+    (oset! ctx "fillStyle" "#333")
+    (draw-node node))
   (draw-editor)
   (draw-cursor))
 
