@@ -31,11 +31,11 @@
 ;; character size and padding
 (def char-h 20)
 (def char-w nil)
-(def char-padh 8)
+(def char-padh 10)
 
 (defn set-font! []
-  (oset! ctx "font" (str char-h "px monospace"))
-  (oset! ctx "textBaseline" "top")
+  (oset! ctx "font" (str char-h "px Menlo"))
+  (oset! ctx "textBaseline" "middle")
   (oset! ctx "textAlign" "left"))
 
 (defn calc-char-size! []
@@ -133,8 +133,9 @@
 ;;----------------------------------------------------------------------
 
 (defn draw-text [text pos]
-  (let [[x y] (code->cam pos)]
-    (ocall ctx "fillText" text x y)))
+  (let [[x y] (code->cam pos)
+        fy (+ y (* 0.5 (+ char-h char-padh)))]
+    (ocall ctx "fillText" text x fy)))
 
 (defn draw-node [{:keys [paren text xy xy-end children]}]
   (cond
