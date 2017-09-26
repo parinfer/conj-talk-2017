@@ -45,6 +45,25 @@
     (set! char-w (/ text-width (count text)))))
 
 ;;----------------------------------------------------------------------
+;; Paths
+;;----------------------------------------------------------------------
+
+(defn nav-path [path]
+  (mapv inc path))
+
+(defn common-ancestor [a b]
+  (when (and a b (= (first a) (first b)))
+    (cons (first a) (common-ancestor (next a) (next b)))))
+
+(defn nav-diff [from to]
+  (let [i (count (common-ancestor from to))]
+    (concat
+      (vec (repeat (- (count from) i) 0))
+      (subvec to i))))
+(assert (= (nav-diff [1 2 2 1] [1 3]) [0 0 0 3]))
+(assert (= (nav-diff [1 3] [1 2 2 1]) [0 2 2 1]))
+
+;;----------------------------------------------------------------------
 ;; Printing
 ;;----------------------------------------------------------------------
 
