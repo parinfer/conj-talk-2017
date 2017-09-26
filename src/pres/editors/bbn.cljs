@@ -160,10 +160,14 @@
 (defn inside-node? [m node]
   (inside-area? m (code-area->cam (node->area node))))
 
-(defn node-at [[x y]]
+(defn nodes-at [[x y]]
   (->> code-nodes
        (filter #(inside-node? [x y] %))
-       (sort-by #(count (:path %)))
+       (sort-by #(count (:path %)))))
+
+(defn node-at [[x y]]
+  (->> (nodes-at [x y])
+       (filter :paren)
        (last)))
 
 ;;----------------------------------------------------------------------
