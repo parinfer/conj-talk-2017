@@ -54,9 +54,9 @@
   [(+ code-x (* x char-w))
    (+ code-y (* y (+ char-h char-padh)))])
 
-(defn node->cam-rect [{:keys [xy text paren]}]
+(defn text->cam-rect [text xy]
   (let [[x y] (code->cam xy)
-        w (* char-w (if paren 1 (count text)))
+        w (* char-w (count text))
         h (+ char-h char-padh)]
     [x y w h]))
 
@@ -64,9 +64,15 @@
   (and (<= x mx (+ x w))
        (<= y my (+ y h))))
 
+(defn inside-node? [mxy {:keys [paren text xy xy-end]}]
+  (if paren
+    (or (inside-rect? mxy (text->cam-rect paren xy))
+        (inside-rect? mxy (text->cam-rect paren xy-end)))
+    (inside-rect? mxy (text->cam-rect text xy))))
+
 (defn node-at [[x y]]
   (->> nodes
-       (filter #(inside-rect? [x y] (node->cam-rect %)))
+       (filter #(inside-node? [x y] %))
        (first)))
 
 ;;----------------------------------------------------------------------
@@ -93,12 +99,18 @@
         hover (get-in @state [:bbn :hover-node])]
     (ocall ctx "fillText" (debug-node-str hover) 0 0)))
 
+(defn draw-cursor []
+  (let [hover (get-in @state [:bbn :hover-node])
+        cursor (if hover "pointer" "default")]
+    (oset! js/document "body.style.cursor" cursor)))
+
 (defn draw []
   (set-font!)
   (when (nil? char-w)
     (calc-char-size!))
   (draw-node tree)
-  (draw-editor))
+  (draw-editor)
+  (draw-cursor))
 
 ;;----------------------------------------------------------------------
 ;; Mouse
