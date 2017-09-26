@@ -4,6 +4,7 @@
     [pres.camera :refer [mouse->cam]]
     [pres.reader :refer [read walk]]
     [pres.state :refer [state]]
+    [clojure.string :as string]
     [oops.core :refer [ocall oget oset!]]))
 
 (def close-paren {"(" ")" "{" "}" "[" "]"})
@@ -44,6 +45,22 @@
     (set! char-w (/ text-width (count text)))))
 
 ;;----------------------------------------------------------------------
+;; Printing
+;;----------------------------------------------------------------------
+
+(defn print-node* [{:keys [children paren text]} depth]
+  (if paren
+    (if (zero? depth)
+      "&"
+      (str paren
+           (string/join " " (map #(print-node* % (dec depth)) children))
+           (close-paren paren)))
+    text))
+
+(defn print-node [node]
+  (print-node* node 2))
+
+;;----------------------------------------------------------------------
 ;; Math
 ;;----------------------------------------------------------------------
 
@@ -61,6 +78,8 @@
 
 (def code-x 580)
 (def code-y 200)
+(def editor-x 100)
+(def editor-y 200)
 
 (defn code-size->cam [[w h]]
   [(* w char-w)
@@ -151,7 +170,8 @@
 (defn draw-editor []
   (let [node (get-in @state [:bbn :current-node])
         hover (get-in @state [:bbn :hover-node])]
-    (ocall ctx "fillText" (debug-node-str hover) 0 0)))
+    (when hover
+      (ocall ctx "fillText" (print-node hover) editor-x editor-y))))
 
 (defn draw-cursor []
   (let [hover (get-in @state [:bbn :hover-node])
