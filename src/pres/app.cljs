@@ -23,6 +23,7 @@
 (oset! js/document "body.onresize" on-resize)
 (on-resize)
 
-(bbn/init!)
 
 (add-watch state :repaint draw)
+
+(bbn/init!)

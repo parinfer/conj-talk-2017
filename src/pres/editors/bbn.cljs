@@ -1,7 +1,7 @@
 (ns pres.editors.bbn
   (:require
     [pres.canvas :refer [ctx]]
-    [pres.camera :refer [mouse->cam]]
+    [pres.camera :refer [mouse->cam] :as camera]
     [pres.reader :refer [read walk]]
     [pres.state :refer [state]]
     [clojure.string :as string]
@@ -25,6 +25,20 @@
 (def code-tree (read code-string))
 (def code-nodes (walk code-tree))
 
+(def init-state
+  {:history [{:nav [] :node code-tree}]
+   :current-node code-tree})
+
+;;----------------------------------------------------------------------
+;; State
+;;----------------------------------------------------------------------
+
+(def key- :bbn)
+(def key-hover [key- :hover-node])
+(def key-curr [key- :current-node])
+(def key-history [key- :history])
+(def key-nav [key- :nav])
+
 ;;----------------------------------------------------------------------
 ;; Font drawing
 ;;----------------------------------------------------------------------
@@ -33,6 +47,7 @@
 (def char-h 20)
 (def char-w nil)
 (def char-padh 10)
+(def line-h (+ char-h char-padh))
 
 (defn set-font! []
   (oset! ctx "font" (str char-h "px Menlo"))
@@ -48,9 +63,6 @@
 ;; Paths
 ;;----------------------------------------------------------------------
 
-(defn nav-path [path]
-  (mapv inc path))
-
 (defn common-ancestor [a b]
   (when (and a b (= (first a) (first b)))
     (cons (first a) (common-ancestor (next a) (next b)))))
@@ -62,6 +74,14 @@
       (subvec to i))))
 (assert (= (nav-diff [1 2 2 1] [1 3]) [0 0 0 3]))
 (assert (= (nav-diff [1 3] [1 2 2 1]) [0 2 2 1]))
+
+(defn path->nav [path]
+  (mapv inc path))
+
+(defn path-diff [from to]
+  (nav-diff
+    (path->nav from)
+    (path->nav to)))
 
 ;;----------------------------------------------------------------------
 ;; Printing
@@ -97,12 +117,10 @@
 
 (def code-x 580)
 (def code-y 200)
-(def editor-x 100)
-(def editor-y 200)
 
 (defn code-size->cam [[w h]]
   [(* w char-w)
-   (* h (+ char-h char-padh))])
+   (* h line-h)])
 
 (defn code->cam [[x y]]
   (let [[w h] (code-size->cam [x y])]
@@ -171,12 +189,40 @@
        (last)))
 
 ;;----------------------------------------------------------------------
-;; Drawing
+;; Draw Editor
+;;----------------------------------------------------------------------
+
+(def editor-x 100)
+(def editor-y 400)
+
+(defn print-cmd [nav]
+ (string/join " " (conj (vec nav) "P")))
+
+(defn draw-editor []
+  (let [curr (get-in @state key-curr)
+        hover (get-in @state key-hover)
+        nav (get-in @state key-nav)
+        history (get-in @state key-history)]
+    (ocall ctx "save")
+    (ocall ctx "translate" editor-x editor-y)
+    (oset! ctx "globalAlpha" 0.6)
+    (ocall ctx "fillText" (str "*" (when nav (print-cmd nav))) 0 0)
+    (ocall ctx "fillText" (str " " (when hover (print-node hover))) 0 line-h)
+    (ocall ctx "fillText" (str " " (when curr (print-node curr))) 0 (* -2 line-h))
+    (oset! ctx "globalAlpha" 0.3)
+    (doseq [{:keys [nav node]} (take 4 (reverse history))]
+      (ocall ctx "translate" 0 (* -3 line-h))
+      (ocall ctx "fillText" (str "*" (print-cmd nav)) 0 0)
+      (ocall ctx "fillText" (str " " (print-node node)) 0 line-h))
+    (ocall ctx "restore")))
+
+;;----------------------------------------------------------------------
+;; Draw Code (todo, make relative to some coord)
 ;;----------------------------------------------------------------------
 
 (defn draw-text [text pos]
   (let [[x y] (code->cam pos)
-        fy (+ y (* 0.5 (+ char-h char-padh)))]
+        fy (+ y (* 0.5 line-h))]
     (ocall ctx "fillText" text x fy)))
 
 (defn draw-node [{:keys [paren text xy xy-end children]}]
@@ -187,17 +233,8 @@
             (run! draw-node children))
     text (draw-text text xy)))
 
-(defn debug-node-str [node]
-  (str (pr-str (:path node)) ":" (or (:paren node) (:text node))))
-
-(defn draw-editor []
-  (let [node (get-in @state [:bbn :current-node])
-        hover (get-in @state [:bbn :hover-node])]
-    (when hover
-      (ocall ctx "fillText" (print-node hover) editor-x editor-y))))
-
 (defn draw-cursor []
-  (let [hover (get-in @state [:bbn :hover-node])
+  (let [hover (get-in @state key-hover)
         cursor (if hover "pointer" "default")]
     (oset! js/document "body.style.cursor" cursor)))
 
@@ -212,12 +249,24 @@
   (ocall ctx "closePath")
   (ocall ctx "stroke"))
 
+(defn draw-code-window []
+  (let [x (- code-x 20)
+        w (- camera/w x)]
+    (oset! ctx "fillStyle" "#F5F5F5")
+    (ocall ctx "fillRect" x 0 w camera/h)
+    (oset! ctx "fillStyle" "#000")))
+
+;;----------------------------------------------------------------------
+;; Draw all
+;;----------------------------------------------------------------------
+
 (defn draw []
   (set-font!)
   (when (nil? char-w)
     (calc-char-size!))
+  (draw-code-window)
   (draw-node code-tree)
-  (when-let [node (get-in @state [:bbn :hover-node])]
+  (when-let [node (get-in @state key-hover)]
     (draw-area (code-area->cam (node->area node))))
   (draw-editor)
   (draw-cursor))
@@ -227,23 +276,32 @@
 ;;----------------------------------------------------------------------
 
 (defn on-mouse-down [e]
-  (let [[x y] (mouse->cam e)
-        node (node-at [x y])]
-    (when node
-      (swap! state assoc-in [:bbn :current-node] node))))
+  (let [curr (get-in @state key-curr)
+        hover (get-in @state key-hover)
+        nav (get-in @state key-nav)]
+    (when hover
+      (swap! state update-in key-history conj {:nav nav :node hover})
+      (swap! state assoc-in key-curr hover)
+      (swap! state assoc-in key-hover nil)
+      (swap! state assoc-in key-nav nil))))
 
 (defn on-mouse-move [e]
   (let [[x y] (mouse->cam e)
-        node (node-at [x y])
-        prev-node (get-in @state [:bbn :hover-node])]
-    (when-not (= node prev-node)
-      (swap! state assoc-in [:bbn :hover-node] node))))
+        hover (node-at [x y])
+        curr (get-in @state key-curr)
+        prev-hover (get-in @state key-hover)]
+    (when-not (= hover prev-hover)
+      (swap! state assoc-in key-hover hover)
+      (swap! state assoc-in key-nav
+        (when hover
+          (path-diff (:path curr) (:path hover)))))))
 
 ;;----------------------------------------------------------------------
 ;; Load
 ;;----------------------------------------------------------------------
 
 (defn init! []
+  (swap! state assoc key- init-state)
   (ocall js/window "addEventListener" "mousedown" on-mouse-down)
   (ocall js/window "addEventListener" "mousemove" on-mouse-move))
 
