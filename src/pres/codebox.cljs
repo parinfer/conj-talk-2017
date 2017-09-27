@@ -177,24 +177,31 @@
    (restore)))
 
 (defn draw-cursor [g [cx cy]]
-  nil)
+  (setup g)
+  (ocall ctx "beginPath")
+  (let [[x y] (code->cam [cx cy])]
+    (ocall ctx "moveTo" x y)
+    (ocall ctx "lineTo" x (+ y line-h))
+    (ocall ctx "stroke"))
+  (restore))
+
+(defn pick-nodes [g [mx my]]
+  (let [[x y] (rel-cam g [mx my])]
+    (->> (:nodes g)
+         (filter #(inside-node? g [x y] %)))))
 
 (defn char-coord-at [g [mx my]]
   (cam->code (rel-cam g [mx my])))
 
 (defn cursor-coord-at [g [mx my]]
-  (cam->cursor (rel-cam g [mx my])))
+  (when (seq (pick-nodes g [mx my]))
+    (cam->cursor (rel-cam g [mx my]))))
 
 (defn char-at [g [cx cy]]
   (aget (get (:lines g) cy) cx))
 
 (defn node-at [g [cx cy]]
   nil)
-
-(defn pick-nodes [g [mx my]]
-  (let [[x y] (rel-cam g [mx my])]
-    (->> (:nodes g)
-         (filter #(inside-node? g [x y] %)))))
 
 (defn lookup [g path]
   (when path
