@@ -38,8 +38,7 @@
 (def state-key :bbn)
 
 (def init-state
-  {:history [{:nav [] :node top-node}]
-   :path-curr [0]
+  {:path-curr [0]
    :path-hover nil
    :nav nil})
 
@@ -124,7 +123,6 @@
       (set-box-curr! hover)
       (set-state!
         (-> (get-state)
-            (update :history conj {:nav nav :node hover})
             (assoc :path-curr path-hover)
             (dissoc :path-hover :nav))))))
 
