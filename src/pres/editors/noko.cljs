@@ -58,6 +58,22 @@
   (swap! state assoc state-key s))
 
 ;;----------------------------------------------------------------------
+;; Path utils
+;;----------------------------------------------------------------------
+
+(defn atom-path? [path]
+  (let [{:keys [text paren]} (codebox/lookup box-full path)]
+    (and (not= text "&")
+         (not paren))))
+
+(defn parent-path [path]
+  (vec (butlast path)))
+
+(defn parent-if-atom [path]
+  (when path
+    (if (atom-path? path) (parent-path path) path)))
+
+;;----------------------------------------------------------------------
 ;; Draw Editor
 ;;----------------------------------------------------------------------
 
@@ -79,20 +95,28 @@
     (when-let [hover (codebox/lookup box-full path-hover)]
       (codebox/draw-region box-full hover)
       (oset! ctx "strokeStyle" "#000")
-      (ocall ctx "stroke")))
+      (ocall ctx "stroke"))))
 
- (defn draw-box-curr []
-   (let [{:keys [path-curr path-hover]} (get-state)]
-     (oset! ctx "fillStyle" "#333")
-     (codebox/draw box-curr)
-     (when (and (descendant? path-hover path-curr)
-             (not= path-hover path-curr))
-       (let [path (vec (cons 0 (drop (count path-curr) path-hover)))
-             hover (codebox/lookup box-curr path)]
-         (when hover
-           (codebox/draw-region box-curr hover)
-           (oset! ctx "strokeStyle" "#000")
-           (ocall ctx "stroke")))))))
+(defn draw-box-curr []
+  (let [{:keys [path-curr path-hover]} (get-state)]
+    (oset! ctx "fillStyle" "#333")
+    (codebox/draw box-curr)
+    (when (and (descendant? path-hover path-curr)
+            (not= path-hover path-curr))
+      (let [path (vec (cons 0 (drop (count path-curr) path-hover)))
+            hover (codebox/lookup box-curr path)
+            line-h codebox/line-h
+            [x y] (:xy box-curr)]
+        (when hover
+          (codebox/draw-region box-curr hover)
+          (oset! ctx "strokeStyle" "#000")
+          (ocall ctx "stroke"))
+        (when (= 2 (count path))
+          (ocall ctx "save")
+          (codebox/set-font!)
+          (ocall ctx "translate" x (+ y (* 1.5 line-h)))
+          (ocall ctx "fillText" (str "_") 0 (* (second path) line-h))
+          (ocall ctx "restore"))))))
 
 ;;----------------------------------------------------------------------
 ;; Draw all
@@ -108,26 +132,32 @@
 ;;----------------------------------------------------------------------
 
 (defn on-mouse-down [e]
-  (let [{:keys [path-curr path-hover nav]} (get-state)
-        hover (codebox/lookup box-full path-hover)]
-    (when hover
-      (set-box-curr! hover)
+  (let [{:keys [path-hover nav]} (get-state)
+        path-curr (parent-if-atom path-hover)
+        curr (codebox/lookup box-full path-curr)]
+    (when curr
+      (set-box-curr! curr)
       (set-state!
         (-> (get-state)
-            (assoc :path-curr path-hover)
+            (assoc :path-curr path-curr)
             (dissoc :path-hover :nav))))))
 
-(defn pick-node [code [x y]]
-  (->> (codebox/pick-nodes code [x y])
+(defn pick-node-full [[x y]]
+  (->> (codebox/pick-nodes box-full [x y])
        (filter #(or (:paren %) (= (:text %) "&")))
        (sort-by #(count (:path %)))
        (last)))
 
+(defn pick-node-curr [[x y]]
+  (->> (codebox/pick-nodes box-curr [x y])
+       (filter #(= 2 (count (:path %))))
+       (first)))
+
 (defn on-mouse-move [e]
   (let [[x y] (mouse->cam e)
         {:keys [path-curr path-hover]} (get-state)
-        new-path-hover (or (:path (pick-node box-full [x y]))
-                         (when-let [node (pick-node box-curr [x y])]
+        new-path-hover (or (:path (pick-node-full [x y]))
+                         (when-let [node (pick-node-curr [x y])]
                            (vec (concat path-curr (next (:path node))))))]
     (when-not (= new-path-hover path-hover)
       (set-state!
