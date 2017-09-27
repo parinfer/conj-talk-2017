@@ -47,9 +47,22 @@
 (defn draw-box []
   (oset! ctx "fillStyle" "#333")
   (codebox/draw box)
-  (when-let [cursor (get-state :cursor)]
-    (oset! ctx "strokeStyle" "#333")
-    (codebox/draw-cursor box (get-state :cursor))))
+  (let [{:keys [cursor paren]} (get-state)]
+    (when cursor
+      (oset! ctx "strokeStyle" "#333")
+      (codebox/draw-cursor box (get-state :cursor)))
+    (when paren
+      (ocall ctx "save")
+      (let [[x y] (:xy box)]
+        (ocall ctx "translate" x y))
+      (codebox/set-font!)
+      (let [[x y] (codebox/code->cam (:xy paren))]
+        (ocall ctx "translate" x y))
+      (oset! ctx "fillStyle" "#333")
+      (ocall ctx "fillRect" 0 0 codebox/char-w codebox/line-h)
+      (oset! ctx "fillStyle" "#f5f5f5")
+      (ocall ctx "fillText" (:paren paren) 0 (* 0.5 codebox/line-h))
+      (ocall ctx "restore"))))
 
 ;;----------------------------------------------------------------------
 ;; Draw all
