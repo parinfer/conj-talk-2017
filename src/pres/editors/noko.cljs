@@ -80,7 +80,7 @@
 (defn print-cmd [nav]
  (string/join " " (conj (vec nav) "P")))
 
-(defn draw-cursor []
+(defn update-cursor []
   (let [{:keys [path-hover]} (get-state)
         cursor (if path-hover "pointer" "default")]
     (oset! js/document "body.style.cursor" cursor)))
@@ -125,7 +125,7 @@
 (defn draw []
   (draw-box-full)
   (draw-box-curr)
-  (draw-cursor))
+  (update-cursor))
 
 ;;----------------------------------------------------------------------
 ;; Mouse

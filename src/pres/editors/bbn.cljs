@@ -72,7 +72,7 @@
         (ocall ctx "fillText" (str " " (when hover (print-node hover))) 0 line-h))
       (ocall ctx "restore")))
 
-(defn draw-cursor []
+(defn update-cursor []
   (let [{:keys [path-hover]} (get-state)
         cursor (if path-hover "pointer" "default")]
     (oset! js/document "body.style.cursor" cursor)))
@@ -110,7 +110,7 @@
   (draw-box-full)
   (draw-box-curr)
   (draw-editor)
-  (draw-cursor))
+  (update-cursor))
 
 ;;----------------------------------------------------------------------
 ;; Mouse
