@@ -58,22 +58,20 @@
  (string/join " " (conj (vec nav) "P")))
 
 (defn draw-editor []
-  (let [{:keys [history path-curr path-hover nav]} (get-state)
-        hover (codebox/lookup box-curr path-hover)
+  (let [{:keys [path-curr path-hover nav]} (get-state)
+        hover (codebox/lookup box-full path-hover)
         line-h codebox/line-h
         [x y] (:xy box-curr)]
-    (ocall ctx "save")
-    (codebox/set-font!)
-    (ocall ctx "translate" (- x codebox/char-w) (+ y (* 2.5 line-h)))
-    (oset! ctx "globalAlpha" 0.6)
-    (ocall ctx "fillText" (str "*" (when nav (print-cmd nav))) 0 0)
-    (ocall ctx "fillText" (str " " (when hover (print-node hover))) 0 line-h)
-    (oset! ctx "globalAlpha" 0.3)
-    #_(doseq [{:keys [nav node]} (take 4 (reverse history))]
-        (ocall ctx "translate" 0 (* -3 line-h))
-        (ocall ctx "fillText" (str "*" (print-cmd nav)) 0 0)
-        (ocall ctx "fillText" (str " " (print-node node)) 0 line-h))
-    (ocall ctx "restore")))
+      (ocall ctx "save")
+      (codebox/set-font!)
+      (ocall ctx "translate" x (+ y (* 2.5 line-h)))
+      (oset! ctx "globalAlpha" 0.3)
+      (ocall ctx "fillText" (str "*") 0 0)
+      (when-not (= path-curr path-hover)
+        (ocall ctx "fillText" (str " " (when nav (print-cmd nav))) 0 0)
+        (oset! ctx "globalAlpha" 0.6)
+        (ocall ctx "fillText" (str " " (when hover (print-node hover))) 0 line-h))
+      (ocall ctx "restore")))
 
 (defn draw-cursor []
   (let [{:keys [path-hover]} (get-state)
@@ -112,6 +110,7 @@
 (defn draw []
   (draw-box-full)
   (draw-box-curr)
+  (draw-editor)
   (draw-cursor))
 
 ;;----------------------------------------------------------------------
@@ -127,7 +126,7 @@
         (-> (get-state)
             (update :history conj {:nav nav :node hover})
             (assoc :path-curr path-hover)
-            (dissoc :path-hover :path-nav))))))
+            (dissoc :path-hover :nav))))))
 
 (defn pick-node [code [x y]]
   (->> (codebox/pick-nodes code [x y])
