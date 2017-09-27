@@ -31,7 +31,8 @@
 
 (def init-state
   {:cursor nil
-   :paren nil})
+   :paren nil
+   :blink-on false})
 
 (defn get-state
   ([] (get @state state-key))
@@ -47,11 +48,11 @@
 (defn draw-box []
   (oset! ctx "fillStyle" "#333")
   (codebox/draw box)
-  (let [{:keys [cursor paren]} (get-state)]
+  (let [{:keys [cursor paren blink-on]} (get-state)]
     (when cursor
       (oset! ctx "strokeStyle" "#333")
       (codebox/draw-cursor box (get-state :cursor)))
-    (when paren
+    (when (and paren blink-on)
       (ocall ctx "save")
       (let [[x y] (:xy box)]
         (ocall ctx "translate" x y))
@@ -74,6 +75,29 @@
 (defn draw []
   (draw-box)
   (update-cursor))
+
+;;----------------------------------------------------------------------
+;; Animation
+;;----------------------------------------------------------------------
+
+(def blink-duration 250)
+
+(def anim-time 0)
+(defn advance-anim [dt]
+  (set! anim-time (+ anim-time dt))
+  (let [on (even? (Math/floor (/ anim-time blink-duration)))]
+    (when (get-state :paren)
+      (set-state! (assoc (get-state) :blink-on on)))))
+
+(def should-anim? false)
+(def last-time nil)
+
+(defn tick [t]
+  (let [dt (if last-time (- t last-time) 0)]
+    (set! last-time t)
+    (advance-anim dt)
+    (when should-anim?
+      (ocall js/window "requestAnimationFrame" tick))))
 
 ;;----------------------------------------------------------------------
 ;; Mouse
@@ -106,6 +130,8 @@
         new-cursor (codebox/cursor-coord-at box [x y])
         paren (paren-to-blink new-cursor)]
      (when-not (= new-cursor cursor)
+       (when paren
+         (set! anim-time 0))
        (set-state!
          (-> (get-state)
              (assoc :cursor new-cursor
@@ -117,7 +143,10 @@
 
 (defn init! []
   (set-state! init-state)
+  (set! should-anim? true)
+  (ocall js/window "requestAnimationFrame" tick)
   (ocall js/window "addEventListener" "mousemove" on-mouse-move))
 
 (defn cleanup! []
+  (set! should-anim? false)
   (ocall js/window "removeEventListener" "mousemove" on-mouse-move))
