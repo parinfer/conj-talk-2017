@@ -45,6 +45,20 @@
 ;; Cam Coordinates
 ;;----------------------------------------------------------------------
 
+; cam coords relative to our box
+(defn rel-cam [g [x y]]
+  (let [[gx gy] (:xy g)]
+    [(- x gx)
+     (- y gy)]))
+
+(defn cam->code [[x y]]
+  [(Math/floor (/ x char-w))
+   (Math/floor (/ y line-h))])
+
+(defn cam->cursor [[x y]]
+  [(Math/round (/ x char-w))
+   (Math/floor (/ y line-h))])
+
 (defn code->cam [[x y]]
   [(* x char-w)
    (* y line-h)])
@@ -144,6 +158,10 @@
 ;;    (draw-region g)) ;; fill or stroke after
 ;;----------------------------------------------------------------------
 
+;; Coord naming conventions:
+;;   mx/my = mouse coords
+;;   cx/cy = char coords
+
 (defn draw
   ([g] (draw g (:tree g)))
   ([g node]
@@ -158,12 +176,25 @@
    (draw-region* g node)
    (restore)))
 
-(defn pick-nodes [g [x y]]
-  (let [[cx cy] (:xy g)
-        mx (- x cx)
-        my (- y cy)]
+(defn draw-cursor [g [cx cy]]
+  nil)
+
+(defn char-coord-at [g [mx my]]
+  (cam->code (rel-cam g [mx my])))
+
+(defn cursor-coord-at [g [mx my]]
+  (cam->cursor (rel-cam g [mx my])))
+
+(defn char-at [g [cx cy]]
+  (aget (get (:lines g) cy) cx))
+
+(defn node-at [g [cx cy]]
+  nil)
+
+(defn pick-nodes [g [mx my]]
+  (let [[x y] (rel-cam g [mx my])]
     (->> (:nodes g)
-         (filter #(inside-node? g [mx my] %)))))
+         (filter #(inside-node? g [x y] %)))))
 
 (defn lookup [g path]
   (when path
