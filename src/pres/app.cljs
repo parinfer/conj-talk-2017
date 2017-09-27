@@ -3,6 +3,7 @@
     [pres.canvas :as canvas :refer [ctx]]
     [pres.camera :as camera]
     [pres.editors.bbn :as bbn]
+    [pres.editors.noko :as noko]
     [pres.state :refer [state]]
     [oops.core :refer [ocall oget oset!]]))
 
@@ -12,7 +13,8 @@
   (canvas/clear)
   (camera/transform)
   (camera/draw-outline)
-  (bbn/draw)
+  ; (bbn/draw)
+  (noko/draw)
   (ocall ctx "restore"))
 
 (defn on-resize []
@@ -26,4 +28,5 @@
 
 (add-watch state :repaint draw)
 
-(bbn/init!)
+; (bbn/init!)
+(noko/init!)
