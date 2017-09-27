@@ -43,7 +43,7 @@
 ;; State
 ;;----------------------------------------------------------------------
 
-(def state-key :bbn)
+(def state-key :noko)
 
 (def init-state
   {:path-curr [0]
