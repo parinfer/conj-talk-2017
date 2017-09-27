@@ -1,4 +1,7 @@
-(ns pres.reader)
+(ns pres.reader
+  (:require
+    [pres.misc :refer [close-paren]]
+    [clojure.string :as string]))
 
 (defn init-state [text]
   {:xy [0 0]
@@ -77,3 +80,57 @@
 
 (defn walk [node]
   (cons node (flatten (map walk (:children node)))))
+
+;;----------------------------------------------------------------------
+;; Lookup
+;;----------------------------------------------------------------------
+
+(defn node-from-path [src path]
+  (if (seq path)
+    (node-from-path
+      (nth (:children src) (first path))
+      (next path))
+    src))
+
+;;----------------------------------------------------------------------
+;; Paths
+;;----------------------------------------------------------------------
+
+(defn common-ancestor [a b]
+  (when (and a b (= (first a) (first b)))
+    (cons (first a) (common-ancestor (next a) (next b)))))
+
+(defn descendant? [a b]
+  (and a b (= b (take (count b) a))))
+
+(defn nav-diff [from to]
+  (let [i (count (common-ancestor from to))]
+    (concat
+      (vec (repeat (- (count from) i) 0))
+      (subvec to i))))
+(assert (= (nav-diff [1 2 2 1] [1 3]) [0 0 0 3]))
+(assert (= (nav-diff [1 3] [1 2 2 1]) [0 2 2 1]))
+
+(defn path->nav [path]
+  (mapv inc path))
+
+(defn path-diff [from to]
+  (nav-diff
+    (path->nav from)
+    (path->nav to)))
+
+;;----------------------------------------------------------------------
+;; Printing
+;;----------------------------------------------------------------------
+
+(defn print-node* [{:keys [children paren text]} depth]
+  (if paren
+    (if (zero? depth)
+      "&"
+      (str paren
+           (string/join " " (map #(print-node* % (dec depth)) children))
+           (close-paren paren)))
+    text))
+
+(defn print-node [node]
+  (print-node* node 2))

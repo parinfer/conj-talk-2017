@@ -2,10 +2,9 @@
   (:require
     [pres.canvas :refer [ctx]]
     [pres.camera :refer [mouse->cam] :as camera]
-    [pres.reader :refer [read walk]]
+    [pres.reader :refer [read walk node-from-path]]
+    [pres.misc :refer [close-paren]]
     [oops.core :refer [ocall oget oset!]]))
-
-(def close-paren {"(" ")" "{" "}" "[" "]"})
 
 ;;----------------------------------------------------------------------
 ;; Font drawing
@@ -165,6 +164,10 @@
         my (- y cy)]
     (->> (:nodes g)
          (filter #(inside-node? g [mx my] %)))))
+
+(defn lookup [g path]
+  (when path
+    (node-from-path (:tree g) (next path)))) ; ignore first key since we assume top-node))
 
 (defn make
   [string [x y]]
