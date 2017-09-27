@@ -4,7 +4,7 @@
     [pres.camera :refer [mouse->cam] :as camera]
     [pres.state :refer [state]]
     [pres.codebox :as codebox]
-    [pres.reader :refer [print-node path-diff descendant?]]
+    [pres.misc :refer [close-paren]]
     [clojure.string :as string]
     [oops.core :refer [ocall oget oset!]]))
 
@@ -30,7 +30,8 @@
 (def state-key :zmacs)
 
 (def init-state
-  {:cursor nil})
+  {:cursor nil
+   :paren nil})
 
 (defn get-state
   ([] (get @state state-key))
@@ -65,14 +66,37 @@
 ;; Mouse
 ;;----------------------------------------------------------------------
 
+(defn open-paren-to-blink [[cx cy]]
+  (let [transform (fn [node] (select-keys node [:xy :paren]))]
+    (->> (:nodes box)
+         (filter :paren)
+         (filter #(= [(dec cx) cy] (:xy-end %)))
+         (map transform)
+         (first))))
+
+(defn close-paren-to-blink [[cx cy]]
+  (let [transform (fn [{:keys [xy-end paren]}]
+                    {:xy xy-end :paren (close-paren paren)})]
+    (->> (:nodes box)
+         (filter :paren)
+         (filter #(= [cx cy] (:xy %)))
+         (map transform)
+         (first))))
+
+(defn paren-to-blink [[cx cy]]
+  (or (open-paren-to-blink [cx cy])
+      (close-paren-to-blink [cx cy])))
+
 (defn on-mouse-move [e]
   (let [[x y] (mouse->cam e)
         {:keys [cursor]} (get-state)
-        new-cursor (codebox/cursor-coord-at box [x y])]
+        new-cursor (codebox/cursor-coord-at box [x y])
+        paren (paren-to-blink new-cursor)]
      (when-not (= new-cursor cursor)
        (set-state!
          (-> (get-state)
-             (assoc :cursor new-cursor))))))
+             (assoc :cursor new-cursor
+                    :paren paren))))))
 
 ;;----------------------------------------------------------------------
 ;; Load
