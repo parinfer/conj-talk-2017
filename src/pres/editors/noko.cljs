@@ -37,8 +37,6 @@
   (set! box-curr
     (codebox/make (noko-string node) [100 200])))
 
-(set-box-curr! top-node)
-
 ;;----------------------------------------------------------------------
 ;; State
 ;;----------------------------------------------------------------------
@@ -170,6 +168,7 @@
 ;;----------------------------------------------------------------------
 
 (defn init! []
+  (set-box-curr! top-node)
   (set-state! init-state)
   (ocall js/window "addEventListener" "mousedown" on-mouse-down)
   (ocall js/window "addEventListener" "mousemove" on-mouse-move))
