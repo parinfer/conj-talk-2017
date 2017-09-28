@@ -11,23 +11,24 @@
 ;;----------------------------------------------------------------------
 
 ;; character size and padding
-(def char-h 20)
+(def char-h nil)
 (def char-w nil)
-(def char-padh 10)
-(def line-h (+ char-h char-padh))
+(def line-h nil)
 
 (defn set-font! []
   (oset! ctx "font" (str char-h "px Menlo"))
   (oset! ctx "textBaseline" "middle")
   (oset! ctx "textAlign" "left"))
 
-(defn calc-char-size! []
+(defn set-font-size! [size]
+  (set! char-h size)
+  (set! line-h (* size 1.5))
+  (set-font!)
   (let [text "abcdef"
         text-width (oget (ocall ctx "measureText" text) "width")]
     (set! char-w (/ text-width (count text)))))
 
-(set-font!)
-(calc-char-size!)
+(set-font-size! 20)
 
 ;;----------------------------------------------------------------------
 ;; Math
