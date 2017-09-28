@@ -8,15 +8,23 @@
     [pres.state :refer [state]]
     [oops.core :refer [ocall oget oset!]]))
 
+(def slide-funcs
+  {:bbn {:init bbn/init! :draw bbn/draw}
+   :noko {:init noko/init! :draw noko/draw}
+   :zmacs {:init zmacs/init! :draw zmacs/draw}})
+
+(defn run-slide-func [func-name]
+  (let [slide-name (:slide @state)
+        f (get-in slide-funcs [slide-name func-name])]
+    (f)))
+
 (defn draw []
   (ocall ctx "save")
   (canvas/transform)
   (canvas/clear)
   (camera/transform)
   (camera/draw-outline)
-  ; (bbn/draw)
-  ; (noko/draw)
-  (zmacs/draw)
+  (run-slide-func :draw)
   (ocall ctx "restore"))
 
 (defn on-resize []
@@ -24,12 +32,11 @@
   (camera/recalc!)
   (draw))
 
-(oset! js/document "body.onresize" on-resize)
-(on-resize)
+(defn init! []
+  (swap! state assoc :slide :zmacs)
+  (oset! js/document "body.onresize" on-resize)
+  (on-resize)
+  (add-watch state :repaint draw)
+  (run-slide-func :init))
 
-
-(add-watch state :repaint draw)
-
-; (bbn/init!)
-; (noko/init!)
-(zmacs/init!)
+(init!)
