@@ -6,6 +6,7 @@
     [pres.codebox :as codebox]
     [pres.reader :refer [print-node path-diff descendant?]]
     [pres.misc :refer [close-paren]]
+    [pres.examples :as examples]
     [clojure.string :as string]
     [oops.core :refer [ocall oget oset!]]))
 
@@ -15,14 +16,10 @@
 
 ; code example from page 54 of BBN manual:
 ; https://github.com/shaunlebron/history-of-lisp-parens/blob/master/papers/656771.pdf
-(def box-full (codebox/make (subs "
- (lambda (x y)
-   (cond
-     ((nul x) z)
-     (t (cons
-          (car x)
-          (append (cdr x) y)))))
-" 1) {:xy [580 200] :font-size 20}))
+(def box-full
+  (codebox/make examples/short-func
+    {:xy [580 200]
+     :font-size 20}))
 
 (def top-node (:tree box-full))
 

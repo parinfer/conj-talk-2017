@@ -5,6 +5,7 @@
     [pres.state :refer [state]]
     [pres.codebox :as codebox]
     [pres.misc :refer [close-paren]]
+    [pres.examples :as examples]
     [clojure.string :as string]
     [oops.core :refer [ocall oget oset!]]))
 
@@ -12,16 +13,10 @@
 ;; Codeboxes
 ;;----------------------------------------------------------------------
 
-; code example from page 54 of BBN manual:
-; https://github.com/shaunlebron/history-of-lisp-parens/blob/master/papers/656771.pdf
-(def box (codebox/make (subs "
- (lambda (x y)
-   (cond
-     ((nul x) z)
-     (t (cons
-          (car x)
-          (append (cdr x) y)))))
-" 1) {:xy [380 200] :font-size 20}))
+(def box
+  (codebox/make examples/short-func
+    {:xy [380 200]
+     :font-size 20}))
 
 ;;----------------------------------------------------------------------
 ;; State

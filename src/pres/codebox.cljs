@@ -130,11 +130,8 @@
              (run! #(draw* g %) children))
      text (draw-text text xy)))
 
-(defn setup-font-size [g]
-  (set-font-size! (:font-size g)))
-
 (defn setup-font [g]
-  (setup-font-size g)
+  (set-font-size! (:font-size g))
   (use-font! char-h))
 
 (defn setup-draw [g]
@@ -197,17 +194,17 @@
   (restore))
 
 (defn pick-nodes [g [mx my]]
-  (setup-font-size g)
+  (setup-font g)
   (let [[x y] (rel-cam g [mx my])]
     (->> (:nodes g)
          (filter #(inside-node? g [x y] %)))))
 
 (defn char-coord-at [g [mx my]]
-  (setup-font-size g)
+  (setup-font g)
   (cam->code (rel-cam g [mx my])))
 
 (defn cursor-coord-at [g [mx my]]
-  (setup-font-size g)
+  (setup-font g)
   (when (seq (pick-nodes g [mx my]))
     (cam->cursor (rel-cam g [mx my]))))
 
