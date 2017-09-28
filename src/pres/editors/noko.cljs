@@ -22,7 +22,7 @@
      (t (cons
           (car x)
           (append (cdr x) y)))))
-" 1) [580 200]))
+" 1) {:xy [580 200] :font-size 20}))
 
 (def top-node (:tree box-full))
 
@@ -35,7 +35,8 @@
 (def box-curr)
 (defn set-box-curr! [node]
   (set! box-curr
-    (codebox/make (noko-string node) [100 200])))
+    (codebox/make (noko-string node)
+      {:xy [100 200] :font-size 20})))
 
 ;;----------------------------------------------------------------------
 ;; State
@@ -111,7 +112,7 @@
           (ocall ctx "stroke"))
         (when (= 2 (count path))
           (ocall ctx "save")
-          (codebox/set-font!)
+          (codebox/setup-font box-curr)
           (ocall ctx "translate" x (+ y (* 1.5 line-h)))
           (ocall ctx "fillText" (str "_") 0 (* (second path) line-h))
           (ocall ctx "restore"))))))

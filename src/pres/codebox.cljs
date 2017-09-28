@@ -15,20 +15,23 @@
 (def char-w nil)
 (def line-h nil)
 
-(defn set-font! []
-  (oset! ctx "font" (str char-h "px Menlo"))
+(defn use-font! [h]
+  (oset! ctx "font" (str h "px Menlo"))
   (oset! ctx "textBaseline" "middle")
   (oset! ctx "textAlign" "left"))
+
+(def get-char-w
+  (memoize
+    (fn [h]
+      (use-font! h)
+      (let [text "abcdef"
+            text-width (oget (ocall ctx "measureText" text) "width")]
+        (/ text-width (count text))))))
 
 (defn set-font-size! [size]
   (set! char-h size)
   (set! line-h (* size 1.5))
-  (set-font!)
-  (let [text "abcdef"
-        text-width (oget (ocall ctx "measureText" text) "width")]
-    (set! char-w (/ text-width (count text)))))
-
-(set-font-size! 20)
+  (set! char-w (get-char-w size)))
 
 ;;----------------------------------------------------------------------
 ;; Math
@@ -127,8 +130,15 @@
              (run! #(draw* g %) children))
      text (draw-text text xy)))
 
-(defn setup [g]
-  (set-font!)
+(defn setup-font-size [g]
+  (set-font-size! (:font-size g)))
+
+(defn setup-font [g]
+  (setup-font-size g)
+  (use-font! char-h))
+
+(defn setup-draw [g]
+  (setup-font g)
   (ocall ctx "save")
   (let [[x y] (:xy g)]
     (ocall ctx "translate" x y)))
@@ -166,19 +176,19 @@
 (defn draw
   ([g] (draw g (:tree g)))
   ([g node]
-   (setup g)
+   (setup-draw g)
    (draw* g node)
    (restore)))
 
 (defn draw-region
   ([g] (draw-region g (:tree g)))
   ([g node]
-   (setup g)
+   (setup-draw g)
    (draw-region* g node)
    (restore)))
 
 (defn draw-cursor [g [cx cy]]
-  (setup g)
+  (setup-draw g)
   (ocall ctx "beginPath")
   (let [[x y] (code->cam [cx cy])]
     (ocall ctx "moveTo" x y)
@@ -187,33 +197,34 @@
   (restore))
 
 (defn pick-nodes [g [mx my]]
+  (setup-font-size g)
   (let [[x y] (rel-cam g [mx my])]
     (->> (:nodes g)
          (filter #(inside-node? g [x y] %)))))
 
 (defn char-coord-at [g [mx my]]
+  (setup-font-size g)
   (cam->code (rel-cam g [mx my])))
 
 (defn cursor-coord-at [g [mx my]]
+  (setup-font-size g)
   (when (seq (pick-nodes g [mx my]))
     (cam->cursor (rel-cam g [mx my]))))
 
 (defn char-at [g [cx cy]]
   (aget (get (:lines g) cy) cx))
 
-(defn node-at [g [cx cy]]
-  nil)
-
 (defn lookup [g path]
   (when path
     (node-from-path (:tree g) (next path)))) ; ignore first key since we assume top-node))
 
 (defn make
-  [string [x y]]
+  [string {:keys [xy font-size]}]
   (let [lines (vec (.split string "\n"))
         tree (read string)
         nodes (walk tree)]
     {:lines lines
      :tree tree
      :nodes nodes
-     :xy [x y]}))
+     :font-size font-size
+     :xy xy}))

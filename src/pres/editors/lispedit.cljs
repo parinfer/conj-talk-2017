@@ -58,7 +58,7 @@
             ('else (cons fcn args))))
          ('else (cons fcn args))))
      (return simpx)))
-" 1) [580 50]))
+" 1) {:xy [580 50] :font-size 7.5}))
 
 (def top-node (:tree box-full))
 
@@ -146,13 +146,11 @@
 ;;----------------------------------------------------------------------
 
 (defn init! []
-  (codebox/set-font-size! 7.5)
   (set-box-curr! top-node)
   (set-state! init-state)
   (ocall js/window "addEventListener" "mousedown" on-mouse-down)
   (ocall js/window "addEventListener" "mousemove" on-mouse-move))
 
 (defn cleanup! []
-  (codebox/set-font-size! 20)
   (ocall js/window "removeEventListener" "mousedown" on-mouse-down)
   (ocall js/window "removeEventListener" "mousemove" on-mouse-move))

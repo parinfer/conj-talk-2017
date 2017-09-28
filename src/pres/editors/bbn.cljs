@@ -21,13 +21,15 @@
      (t (cons
           (car x)
           (append (cdr x) y)))))
-" 1) [580 200]))
+" 1) {:xy [580 200] :font-size 20}))
 
 (def top-node (:tree box-full))
 
 (def box-curr)
 (defn set-box-curr! [node]
-  (set! box-curr (codebox/make (print-node node) [100 200])))
+  (set! box-curr
+    (codebox/make (print-node node)
+      {:xy [100 200] :font-size 20})))
 
 ;;----------------------------------------------------------------------
 ;; State
@@ -60,7 +62,7 @@
         line-h codebox/line-h
         [x y] (:xy box-curr)]
       (ocall ctx "save")
-      (codebox/set-font!)
+      (codebox/setup-font box-curr)
       (ocall ctx "translate" x (+ y (* 2.5 line-h)))
       (oset! ctx "globalAlpha" 0.3)
       (ocall ctx "fillText" (str "*") 0 0)

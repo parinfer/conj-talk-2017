@@ -21,7 +21,7 @@
      (t (cons
           (car x)
           (append (cdr x) y)))))
-" 1) [380 200]))
+" 1) {:xy [380 200] :font-size 20}))
 
 ;;----------------------------------------------------------------------
 ;; State
@@ -56,7 +56,7 @@
       (ocall ctx "save")
       (let [[x y] (:xy box)]
         (ocall ctx "translate" x y))
-      (codebox/set-font!)
+      (codebox/setup-font box)
       (let [[x y] (codebox/code->cam (:xy paren))]
         (ocall ctx "translate" x y))
       (oset! ctx "fillStyle" "#333")
