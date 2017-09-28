@@ -134,3 +134,26 @@
 
 (defn print-node [node]
   (print-node* node 2))
+
+; params {focus, depth, width, lines}
+;  - focus (path)
+;  - depth (max depth)
+;  - width (max width)
+;  - lines (max lines) => if on last allowable line (width-3)
+;    - 3 limits (top, focus, global)
+
+; what the focus ancestors might look like when top max lines is at limit
+; upper bound might have to subtract the number of focus ancestors?
+; (foo ...
+;  (bar ...
+;   (baz ...
+
+; TODO: pprint-fit-width? (allows early exit without descending too far)
+(defn pprint-fit-width? [node params])
+
+; if forced but doesn't fit, try again with width-3 for '...', but use '&' only one unprinted list
+(defn pprint-force-single? [node params]
+  (and (not (descendant? (:path node) (:focus params)))
+       (not (descendant? (:focus params) (:path node)))))
+
+(defn pprint-node [node params])
