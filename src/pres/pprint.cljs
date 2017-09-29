@@ -97,7 +97,7 @@
 
 (defn pprint
   [{:keys [text paren children path] :as node}
-   {:keys [depth trunc-w width lines] :as limits}]
+   {:keys [focus depth width lines] :as limits}]
   (when (pos? width)
     (if text
       (pprint-text node limits)

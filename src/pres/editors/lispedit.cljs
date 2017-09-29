@@ -22,12 +22,15 @@
 (def top-node (:tree box-full))
 
 (def box-curr)
-(defn set-box-curr! []
+(defn set-box-curr! [focus-path]
   (set! box-curr
     (codebox/make
-      (print-node top-node)
+      (pprint top-node
+        {:depth 5
+         :focus focus-path})
       {:xy [100 100]
-       :font-size 12})))
+       :font-size 12
+       :width 80})))
 
 ;;----------------------------------------------------------------------
 ;; State
@@ -88,7 +91,7 @@
   (let [{:keys [path-curr path-hover nav]} (get-state)
         hover (codebox/lookup box-full path-hover)]
     (when hover
-      (set-box-curr!)
+      (set-box-curr! hover)
       (set-state!
         (-> (get-state)
             (assoc :path-curr path-hover)
@@ -102,10 +105,12 @@
 
 (defn on-mouse-move [e]
   (let [[x y] (mouse->cam e)
-        {:keys [path-hover]} (get-state)
+        {:keys [path-hover path-curr]} (get-state)
         new-path-hover (:path (pick-node box-full [x y]))]
     (when-not (= new-path-hover path-hover)
-      (set-box-curr!)
+      (if new-path-hover
+        (set-box-curr! new-path-hover)
+        (set-box-curr! path-curr))
       (set-state!
         (-> (get-state)
             (assoc :path-hover new-path-hover))))))
@@ -115,7 +120,7 @@
 ;;----------------------------------------------------------------------
 
 (defn init! []
-  (set-box-curr!)
+  (set-box-curr! (:path top-node))
   (set-state! init-state)
   (ocall js/window "addEventListener" "mousedown" on-mouse-down)
   (ocall js/window "addEventListener" "mousemove" on-mouse-move))
