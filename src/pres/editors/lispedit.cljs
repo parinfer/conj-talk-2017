@@ -5,6 +5,7 @@
     [pres.state :refer [state]]
     [pres.codebox :as codebox]
     [pres.reader :refer [print-node path-diff descendant?]]
+    ; [pres.pprint :refer [pprint]]
     [pres.examples :as examples]
     [clojure.string :as string]
     [oops.core :refer [ocall oget oset!]]))
@@ -21,8 +22,12 @@
 (def top-node (:tree box-full))
 
 (def box-curr)
-(defn set-box-curr! [node]
-  (set! box-curr (codebox/make (print-node node) [100 200])))
+(defn set-box-curr! []
+  (set! box-curr
+    (codebox/make
+      (print-node top-node)
+      {:xy [100 100]
+       :font-size 12})))
 
 ;;----------------------------------------------------------------------
 ;; State
@@ -62,12 +67,17 @@
       (oset! ctx "strokeStyle" "#000")
       (ocall ctx "stroke"))))
 
+(defn draw-box-curr []
+  (oset! ctx "fillStyle" "#333")
+  (codebox/draw box-curr))
+
 ;;----------------------------------------------------------------------
 ;; Draw all
 ;;----------------------------------------------------------------------
 
 (defn draw []
   (draw-box-full)
+  (draw-box-curr)
   (update-cursor))
 
 ;;----------------------------------------------------------------------
@@ -78,7 +88,7 @@
   (let [{:keys [path-curr path-hover nav]} (get-state)
         hover (codebox/lookup box-full path-hover)]
     (when hover
-      (set-box-curr! hover)
+      (set-box-curr!)
       (set-state!
         (-> (get-state)
             (assoc :path-curr path-hover)
@@ -95,6 +105,7 @@
         {:keys [path-hover]} (get-state)
         new-path-hover (:path (pick-node box-full [x y]))]
     (when-not (= new-path-hover path-hover)
+      (set-box-curr!)
       (set-state!
         (-> (get-state)
             (assoc :path-hover new-path-hover))))))
@@ -104,7 +115,7 @@
 ;;----------------------------------------------------------------------
 
 (defn init! []
-  (set-box-curr! top-node)
+  (set-box-curr!)
   (set-state! init-state)
   (ocall js/window "addEventListener" "mousedown" on-mouse-down)
   (ocall js/window "addEventListener" "mousemove" on-mouse-move))
