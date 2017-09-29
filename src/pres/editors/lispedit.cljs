@@ -5,7 +5,7 @@
     [pres.state :refer [state]]
     [pres.codebox :as codebox]
     [pres.reader :refer [print-node path-diff descendant?]]
-    ; [pres.pprint :refer [pprint]]
+    [pres.pprint :refer [pprint]]
     [pres.examples :as examples]
     [clojure.string :as string]
     [oops.core :refer [ocall oget oset!]]))

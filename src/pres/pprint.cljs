@@ -60,6 +60,7 @@
           (string/join " " (conj results "..."))
           (recur
             (- w (count result) (if (seq results) 1 0))
+            next-children
             (conj results result)))))))
 
 (defn line-per-child
