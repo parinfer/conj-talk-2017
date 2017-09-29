@@ -24,18 +24,21 @@
 (defn truncate-at-width?
   [{:keys [text paren children path] :as node}
    {:keys [focus depth width lines] :as limits}]
+  ; (println "truncate-at-width?")
   (and (not (descendant? path focus))
        (not (descendant? focus path))))
 
 (defn pprint-text
   [{:keys [text paren children path] :as node}
    {:keys [focus depth width lines] :as limits}]
+  ; (println "pprint-text")
   (when (<= (count text) width)
     text))
 
 (defn inline-children
   [{:keys [text paren children path] :as node}
    {:keys [focus depth width lines] :as limits}]
+  ; (println "inline-children")
   (loop [w width
          [child & next-children] children
          results []]
@@ -51,6 +54,7 @@
 (defn inline-children-truncated
   [{:keys [text paren children path] :as node}
    {:keys [focus depth width lines] :as limits}]
+  ; (println "inline-children-truncated")
   (when (>= width (count "& ..."))
     (loop [w (- width (count "..."))
            [child & next-children] children
@@ -66,6 +70,7 @@
 (defn line-per-child
   [{:keys [text paren children path] :as node}
    {:keys [focus depth width lines] :as limits}]
+  ; (println "line-per-child")
   (let [indent (if (:paren (first children)) 1 2)
         line-sep (apply str "\n" (repeat indent " "))]
     (loop [[child & next-children] children
@@ -81,6 +86,7 @@
 (defn pprint-list
   [{:keys [text paren children path] :as node}
    {:keys [focus depth width lines] :as limits}]
+  ; (println "pprint-list")
   (if (zero? depth)
     (when (>= width (count "&"))
       "&")
@@ -98,6 +104,7 @@
 (defn pprint
   [{:keys [text paren children path] :as node}
    {:keys [focus depth width lines] :as limits}]
+  ; (println "pprint")
   (when (pos? width)
     (if text
       (pprint-text node limits)

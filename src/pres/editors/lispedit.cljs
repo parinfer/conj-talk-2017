@@ -27,10 +27,10 @@
     (codebox/make
       (pprint top-node
         {:depth 5
-         :focus focus-path})
+         :focus focus-path
+         :width 80})
       {:xy [100 100]
-       :font-size 12
-       :width 80})))
+       :font-size 12})))
 
 ;;----------------------------------------------------------------------
 ;; State
