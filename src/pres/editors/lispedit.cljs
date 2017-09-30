@@ -26,9 +26,10 @@
   (set! box-curr
     (codebox/make
       (pprint top-node
-        {:depth 15
+        {:depth 4
+         :width 70
          :focus focus-path
-         :width 70})
+         :focus-depth 8})
       {:xy [100 50]
        :font-size 7.5})))
 
@@ -91,7 +92,7 @@
   (let [{:keys [path-curr path-hover nav]} (get-state)
         hover (codebox/lookup box-full path-hover)]
     (when hover
-      (set-box-curr! hover)
+      (set-box-curr! path-hover)
       (set-state!
         (-> (get-state)
             (assoc :path-curr path-hover)

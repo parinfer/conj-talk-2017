@@ -24,12 +24,11 @@
 (defn debug [node limits]
   (str (print-node node) " " (:width limits)))
 
-(defn truncate-at-width?
+(defn in-focus?
   [{:keys [text paren children path] :as node}
    {:keys [focus depth width lines] :as limits}]
-  ; (println "truncate-at-width?" (debug node limits))
-  (and (not (descendant? path focus))
-       (not (descendant? focus path))))
+  (or (descendant? path focus)
+      (descendant? focus path)))
 
 (defn pprint-text
   [{:keys [text paren children path] :as node}
@@ -41,7 +40,6 @@
 (defn inline-children
   [{:keys [text paren children path] :as node}
    {:keys [focus depth width lines] :as limits}]
-  ; (println "inline-children" (debug node limits))
   (loop [w width
          [child & next-children] children
          results []]
@@ -97,21 +95,24 @@
 
 (defn pprint-list
   [{:keys [text paren children path] :as node}
-   {:keys [focus depth width lines] :as limits}]
+   {:keys [focus width lines] :as limits}]
   ; (println "pprint-list" (debug node limits))
-  (if (zero? depth)
-    (when (>= width (count "&"))
-      "&")
-    (when (>= width (count "()"))
-      (let [limits (assoc limits
-                     :width (- width (count "()"))
-                     :depth (dec depth))
-            children-str (or (inline-children node limits)
-                             (if (truncate-at-width? node limits)
-                               (inline-children-truncated node limits)
-                               (line-per-child node limits)))]
-        (when children-str
-          (str "(" children-str ")"))))))
+  (let [focus? (in-focus? node limits)
+        depth-key (if focus? :focus-depth :depth)
+        dec-depth? (if focus? (>= (count path) (count focus)) true)]
+    (if (zero? (limits depth-key))
+      (when (>= width (count "&"))
+        "&")
+      (when (>= width (count "()"))
+        (let [limits (cond-> limits
+                       true (update :width - (count "()"))
+                       dec-depth? (update depth-key dec))
+              children-str (or (inline-children node limits)
+                               (if (in-focus? node limits)
+                                 (line-per-child node limits)
+                                 (inline-children-truncated node limits)))]
+          (when children-str
+            (str "(" children-str ")")))))))
 
 (defn pprint
   [{:keys [text paren children path] :as node}
