@@ -2,24 +2,18 @@
 ;; (uses "fisheye" technique to compress expressions that are out of focus)
 (ns pres.pprint
   (:require
-    [pres.reader :refer [descendant? print-node below?]]
+    [pres.reader :refer [descendant? print-node above?]]
     [clojure.string :as string]))
 
 (declare pprint*)
 
 (declare in-focus?)
-(defn debug [node limits]
-  (str (print-node node) " " (:context-lines limits) (in-focus? node limits)))
 
-(defn in-focus?
-  [{:keys [text paren children path] :as node}
-   {:keys [focus depth width lines] :as limits}]
+(defn in-focus? [path focus]
   (or (descendant? path focus)
       (descendant? focus path)))
 
-(defn path->lines-type
-  [{:keys [path] :as node}
-   {:keys [focus] :as limits}]
+(defn path->lines-type [path focus]
   (cond
     (descendant? path focus) :focus-lines
     (above? path focus) :pre-lines
@@ -30,19 +24,17 @@
    {:keys [focus depth width lines] :as limits}
    own-line?]
   ; (println "pprint-text" (debug node limits))
-  (let [lines-type (path->lines-type node limits)]
-    (when-let [line-fit? (or (not own-line?)
-                             (pos? (limits lines-type)))]
-      (when (<= (count text) width)
-        ; final result
-        {:pprint text
-         :orig-path path
-         :limits (cond-> limits
-                   own-line? (update lines-type dec))}))))
+  (when (<= (count text) width)
+    ; final result
+    {:pprint text
+     :orig-path path
+     :limits (cond-> limits
+               own-line? (update (path->lines-type path focus) dec))}))
 
 (defn inline-children
   [{:keys [text paren children path] :as node}
-   {:keys [focus depth width lines] :as limits}]
+   {:keys [focus depth width lines] :as limits}
+   own-line?]
   (loop [w width
          [child & next-children] children
          results []]
@@ -52,7 +44,8 @@
         ; final result
         {:children results
          :pprint (string/join " " (map :pprint results))
-         :limits limits}
+         :limits (cond-> limits
+                   own-line? (update (path->lines-type path focus) dec))}
 
         ; process child
         (when-let [result (pprint* child (assoc limits :width w) false)]
@@ -63,7 +56,8 @@
 
 (defn inline-children-truncated
   [{:keys [text paren children path] :as node}
-   {:keys [focus depth width lines] :as limits}]
+   {:keys [focus depth width lines] :as limits}
+   own-line?]
   ; (println "inline-children-truncated" (debug node limits))
   (when (>= width (count "& ..."))
     (loop [w (- width (count "..."))
@@ -75,7 +69,8 @@
           ; final result
           {:children results
            :pprint (string/join " " (map :pprint (conj results "...")))
-           :limits limits}
+           :limits (cond-> limits
+                     own-line? (update (path->lines-type path focus) dec))}
 
           ; process child
           (recur
@@ -148,24 +143,24 @@
   [{:keys [text paren children path] :as node}
    {:keys [focus width lines] :as limits}
    own-line?]
-  ; TODO: have inline decrement the line limits
   ; (println "pprint-list" (debug node limits))
-  (let [focus? (in-focus? node limits)
+  (let [focus? (in-focus? path focus)
         depth-key (if focus? :focus-depth :depth)
         dec-depth? (if focus? (>= (count path) (count focus)) true)]
     (if (zero? (limits depth-key))
       (when (>= width (count "&"))
         {:pprint "&"
          :orig-path path
-         :limits limits})
+         :limits (cond-> limits
+                   own-line? (update (path->lines-type path focus) dec))})
       (when (>= width (count "()"))
         (let [limits (cond-> limits
-                       true (update :width - (count "()"))
+                       true (update :width - (count "()")) ; FIXME: ")" is only present for single line
                        dec-depth? (update depth-key dec))
-              result (or (inline-children node limits)
-                         (if (in-focus? node limits)
+              result (or (inline-children node limits own-line?)
+                         (if (in-focus? path focus)
                            (line-per-child node limits)
-                           (inline-children-truncated node limits)))]
+                           (inline-children-truncated node limits own-line?)))]
           (when result
             (assoc result
               :orig-path path
@@ -176,10 +171,13 @@
    {:keys [focus depth width lines] :as limits}
    own-line?]
   ; (println "pprint" (debug node limits))
-  (when (pos? width)
-    (if text
-      (pprint-text node limits own-line?)
-      (pprint-list node limits own-line?))))
+  (let [lines-type (path->lines-type path focus)]
+    (when-let [line-fit? (or (not own-line?)
+                             (pos? (limits lines-type)))]
+      (when (pos? width)
+        (if text
+          (pprint-text node limits own-line?)
+          (pprint-list node limits own-line?))))))
 
 (defn normalize-limits
   [{:keys [focus lines pre-lines focus-lines] :as limits}]
