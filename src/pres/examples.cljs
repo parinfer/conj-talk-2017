@@ -1,5 +1,7 @@
 (ns pres.examples)
 
+(def foo "(foo bar baz hello world this is a really long list)")
+
 ; code example from page 54 of BBN manual:
 ; https://github.com/shaunlebron/history-of-lisp-parens/blob/master/papers/656771.pdf
 (def short-func (subs "
@@ -48,12 +50,12 @@
          ((nump (car args))
           (cond
             ((eq fcn 'minus) (minus (car args)))
-            ((and (eq fcn 'plus) (nump (cadr args))
-               (plus (car args) (cadr args))))
-            ((and (eq fcn 'times) (nump (cadr args))
-               (times (car args) (cadr args))))
-            ((and (eq fcn 'difference) (nump (cadr args))
-               (difference (car args) (cadr args))))
+            ((and (eq fcn 'plus) (nump (cadr args)))
+             (plus (car args) (cadr args)))
+            ((and (eq fcn 'times) (nump (cadr args)))
+             (times (car args) (cadr args)))
+            ((and (eq fcn 'difference) (nump (cadr args)))
+             (difference (car args) (cadr args)))
             ('else (cons fcn args))))
          ('else (cons fcn args))))
      (return simpx)))

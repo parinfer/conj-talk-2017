@@ -26,11 +26,11 @@
   (set! box-curr
     (codebox/make
       (pprint top-node
-        {:depth 5
+        {:depth 15
          :focus focus-path
          :width 80})
-      {:xy [100 100]
-       :font-size 12})))
+      {:xy [100 50]
+       :font-size 7.5})))
 
 ;;----------------------------------------------------------------------
 ;; State
