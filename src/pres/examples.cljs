@@ -1,6 +1,9 @@
 (ns pres.examples)
 
-(def foo "(foo bar baz hello world this is a really long list)")
+(def foo (subs "
+ ((foo bar baz hello world this is a really long list) 
+  (foo bar baz hello world this is a really long list))
+" 1))
 
 ; code example from page 54 of BBN manual:
 ; https://github.com/shaunlebron/history-of-lisp-parens/blob/master/papers/656771.pdf

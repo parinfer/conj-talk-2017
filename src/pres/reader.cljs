@@ -104,6 +104,12 @@
 (defn descendant? [a b]
   (and a b (= b (take (count b) a))))
 
+(defn above? [a b]
+  (when-let [[ai bi] (->> (map vector a b)
+                          (filter (fn [[ai bi]] (not= ai bi)))
+                          (first))]
+    (< ai bi)))
+
 (defn nav-diff [from to]
   (let [i (count (common-ancestor from to))]
     (concat
