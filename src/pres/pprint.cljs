@@ -70,6 +70,9 @@
             next-children
             (conj results result)))))))
 
+(def inline-first-arg?
+  #{"lambda" "prog" "setq"})
+
 (defn line-per-child
   [{:keys [text paren children path] :as node}
    {:keys [focus depth width lines] :as limits}]
@@ -79,7 +82,13 @@
     (loop [[child & next-children] children
            result-lines []]
       (if-not child
-        (string/join line-sep result-lines)
+        (let [[func arg & others] result-lines
+              both (str func " " arg)
+              result-lines (if (and (inline-first-arg? func)
+                                    (>= width (count both)))
+                             (cons both others)
+                             result-lines)]
+          (string/join line-sep result-lines))
         (let [w (- width (if (seq result-lines) indent 0))]
           (when-let [result (pprint child (assoc limits :width w))]
             (recur

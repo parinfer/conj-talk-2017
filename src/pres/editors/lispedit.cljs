@@ -28,7 +28,7 @@
       (pprint top-node
         {:depth 15
          :focus focus-path
-         :width 80})
+         :width 70})
       {:xy [100 50]
        :font-size 7.5})))
 
