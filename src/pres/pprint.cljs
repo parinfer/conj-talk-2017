@@ -166,7 +166,7 @@
                    own-line? (update (path->lines-type path focus) dec))})
       (when (>= width (count "()"))
         (let [limits (cond-> limits
-                       true (update :width - (count "()")) ; FIXME: ")" is only present for single line
+                       true (update :width - (count "(")) ; FIXME: ")" is only present for single line
                        dec-depth? (update depth-key dec))
               result (or (inline-children node limits own-line?)
                          (if (in-focus? path focus)
@@ -194,8 +194,7 @@
 
 (defn normalize-limits
   [{:keys [focus lines pre-lines focus-lines] :as limits}]
-  (let [pre-lines (- (max pre-lines (count focus))
-                     (count focus))
+  (let [pre-lines (max pre-lines (count focus))
         lines (max lines (+ pre-lines focus-lines))]
     (assoc limits
       :pre-lines pre-lines
@@ -203,4 +202,5 @@
       :lines lines)))
 
 (defn pprint [node limits]
-  (pprint* node (normalize-limits limits) true))
+  (let [limits (normalize-limits limits)]
+    (pprint* node limits true)))

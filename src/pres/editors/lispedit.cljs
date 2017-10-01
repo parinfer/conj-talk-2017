@@ -21,21 +21,24 @@
 
 (def top-node (:tree box-full))
 
+(defn pprint-limits [focus-path]
+  {:depth 4
+   :width 70
+   :focus focus-path
+   :focus-depth 8
+   :lines 30
+   :focus-lines 10
+   :pre-lines 10})
+
+(def node-pprint nil)
+
 (def box-curr)
 (defn set-box-curr! [focus-path]
+  (set! node-pprint (pprint top-node (pprint-limits focus-path)))
   (set! box-curr
-    (codebox/make
-      (let [result (pprint top-node
-                     {:depth 4
-                      :width 70
-                      :focus focus-path
-                      :focus-depth 8
-                      :lines 40
-                      :focus-lines 10
-                      :pre-lines 20})]
-        (:pprint result))
-      {:xy [100 50]
-       :font-size 7.5})))
+    (codebox/make (:pprint node-pprint)
+      {:xy [100 100]
+       :font-size 9})))
 
 ;;----------------------------------------------------------------------
 ;; State
