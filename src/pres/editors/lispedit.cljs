@@ -4,7 +4,7 @@
     [pres.camera :refer [mouse->cam] :as camera]
     [pres.state :refer [state]]
     [pres.codebox :as codebox]
-    [pres.reader :refer [print-node path-diff descendant?]]
+    [pres.reader :refer [print-node path-diff descendant? walk]]
     [pres.pprint :refer [pprint]]
     [pres.examples :as examples]
     [clojure.string :as string]
@@ -25,14 +25,15 @@
 (defn set-box-curr! [focus-path]
   (set! box-curr
     (codebox/make
-      (:pprint (pprint top-node
-                 {:depth 4
-                  :width 70
-                  :focus focus-path
-                  :focus-depth 8
-                  :lines 40
-                  :focus-lines 10
-                  :pre-lines 20}))
+      (let [result (pprint top-node
+                     {:depth 4
+                      :width 70
+                      :focus focus-path
+                      :focus-depth 8
+                      :lines 40
+                      :focus-lines 10
+                      :pre-lines 20})]
+        (:pprint result))
       {:xy [100 50]
        :font-size 7.5})))
 

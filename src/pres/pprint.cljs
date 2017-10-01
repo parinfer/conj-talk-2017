@@ -21,7 +21,6 @@
   [{:keys [text paren children path] :as node}
    {:keys [focus depth width lines] :as limits}
    own-line?]
-  ; (println "pprint-text" (debug node limits))
   (when (<= (count text) width)
     ; final result
     {:pprint text
@@ -100,7 +99,6 @@
 (defn line-per-child
   [{:keys [text paren children path] :as node}
    {:keys [focus depth width lines] :as limits}]
-  ; (println "line-per-child of" (debug node limits))
   (let [indent (if (:paren (first children)) 1 2)
         line-sep (apply str "\n" (repeat indent " "))]
 
@@ -155,9 +153,8 @@
 
 (defn pprint-list
   [{:keys [text paren children path] :as node}
-   {:keys [focus width lines] :as limits}
+   {:keys [focus width lines depth focus-depth] :as limits}
    own-line?]
-  ; (println "pprint-list" (debug node limits))
   (let [focus? (in-focus? path focus)
         depth-key (if focus? :focus-depth :depth)
         dec-depth? (if focus? (>= (count path) (count focus)) true)]
@@ -178,13 +175,15 @@
           (when result
             (assoc result
               :path path
-              :pprint (str "(" (:pprint result) ")"))))))))
+              :pprint (str "(" (:pprint result) ")")
+              :limits (assoc (:limits result)
+                        :depth depth
+                        :focus-depth focus-depth))))))))
 
 (defn pprint*
   [{:keys [text paren children path] :as node}
    {:keys [focus depth width lines] :as limits}
    own-line?]
-  ; (println "pprint" (debug node limits))
   (let [lines-type (path->lines-type path focus)]
     (when-let [line-fit? (or (not own-line?)
                              (pos? (limits lines-type)))]
