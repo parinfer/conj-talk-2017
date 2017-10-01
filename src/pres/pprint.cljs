@@ -33,10 +33,10 @@
   [{:keys [text paren children path] :as node}
    {:keys [focus depth width lines] :as limits}
    own-line?]
-  (loop [w width
-         [child & next-children] children
+  (loop [[child & next-children] children
+         limits limits
          results []]
-    (when (>= w 0)
+    (when (>= (:width limits) 0)
       (if-not child
 
         ; final result
@@ -46,35 +46,38 @@
                    own-line? (update (path->lines-type path focus) dec))}
 
         ; process child
-        (when-let [result (pprint* child (assoc limits :width w) false)]
-          (recur
-            (- w (count result) (if (seq results) 1 0)) ; new width w/ space after previous sibling
-            next-children
-            (conj results result)))))))
+        (when-let [result (pprint* child limits false)]
+          (let [child-width (count (:pprint result))
+                space-width (if (seq results) 1 0)]
+            (recur
+              next-children
+              (update limits :width - child-width space-width)
+              (conj results result))))))))
 
 (defn inline-children-truncated
   [{:keys [text paren children path] :as node}
    {:keys [focus depth width lines] :as limits}
    own-line?]
-  ; (println "inline-children-truncated" (debug node limits))
   (when (>= width (count "& ..."))
-    (loop [w (- width (count "..."))
-           [child & next-children] children
+    (loop [[child & next-children] children
+           limits (update limits :width - (count " ..."))
            results []]
-      (let [result (pprint* child (assoc limits :width w) false)]
+      (let [result (pprint* child limits false)]
         (if-not result
 
           ; final result
           {:children results
-           :pprint (string/join " " (map :pprint (conj results "...")))
+           :pprint (string/join " " (conj (mapv :pprint results) "..."))
            :limits (cond-> limits
                      own-line? (update (path->lines-type path focus) dec))}
 
           ; process child
-          (recur
-            (- w (count result) (if (seq results) 1 0))
-            next-children
-            (conj results result)))))))
+          (let [child-width (count (:pprint result))
+                space-width (if (seq results) 1 0)]
+            (recur
+              next-children
+              (update limits :width - child-width space-width)
+              (conj results result))))))))
 
 (def inline-first-arg?
   #{"lambda" "prog" "setq"})
@@ -108,7 +111,8 @@
       (if-not child
 
         ; create final result
-        (let [finalize
+        (let [results (sort-by #(last (:path %)) results)
+              finalize
               (fn [{:keys [prev-i sum] :as result}
                    {:keys [path] :as child}]
                 (let [i (last path)
@@ -200,4 +204,4 @@
       :lines lines)))
 
 (defn pprint [node limits]
-  (pprint* node (normalize-limits limits) false))
+  (pprint* node (normalize-limits limits) true))
