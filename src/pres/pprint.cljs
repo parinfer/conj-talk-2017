@@ -118,7 +118,7 @@
                       sum (cond
                             (= i 0)                         s
                             (and (= i 1) first-arg-inline?) (str sum " " s)
-                            (not= i (inc prev-i))           (str sum line-sep " ..." line-sep s)
+                            (not= i (inc prev-i))           (str sum line-sep "..." line-sep s)
                             :else                           (str sum line-sep s))
                       final? (= child (last results))
                       sum (if (and final? (not= i (dec (count children))))
