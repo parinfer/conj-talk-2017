@@ -79,8 +79,15 @@
   (-> (read* text)
       (get-in [:nodes 0 :children 0]))) ;; assume a top-level list
 
-(defn walk [node]
-  (cons node (flatten (map walk (:children node)))))
+(defn walk
+  ([node] (walk node [0]))
+  ([node path]
+   (cons
+     (assoc node :walk-path path)
+     (flatten
+       (map-indexed
+         #(walk %2 (conj path %1))
+         (:children node))))))
 
 ;;----------------------------------------------------------------------
 ;; Lookup

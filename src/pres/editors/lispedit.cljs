@@ -78,15 +78,21 @@
       (oset! ctx "strokeStyle" "#000")
       (ocall ctx "stroke"))))
 
-; (defn path->pprint-path [path]
-;   (->> (:nodes box-curr)
-;        (filter #(:path))))
+(defn path->pprint-path [path]
+  (->> (:nodes box-curr)
+       (filter #(= path (:path %)))
+       (first)
+       (:walk-path)))
 
 (defn draw-editor []
   (oset! ctx "fillStyle" "#99A")
   (codebox/draw box-curr)
-  (let [{:keys [path-hover]} (get-state)]))
-        ; path (get-state)]))
+  (let [{:keys [path-curr]} (get-state)
+        pprint-path (path->pprint-path path-curr)
+        curr (codebox/lookup box-curr pprint-path)]
+    (when curr
+      (oset! ctx "fillStyle" "#333")
+      (codebox/draw box-curr curr))))
 
 ;;----------------------------------------------------------------------
 ;; Draw all
