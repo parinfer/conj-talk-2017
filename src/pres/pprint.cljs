@@ -107,17 +107,23 @@
       (if-not child
 
         ; create final result
-        ; TODO: insert an ellipsis inside each gap in index (append to previous line)
-        ; use a reduce function with a result structure {prev-index, result-lines}
-        (let [[func arg & others] (sort #(last (:path %)) results)
-              both (str (:pprint func) " " (:pprint arg))
-              result-lines (apply concat (map #(string/split-lines (:pprint %)) children))
-              result-lines (if first-arg-inline? ; NOTE: assuming (>= width (count both))
-                             (cons both (drop 2 result-lines))
-                             result-lines)]
+        (let [finalize
+              (fn [{:keys [prev-i sum] :as result}
+                   {:keys [path] :as child}]
+                (let [i (last path)
+                      sum (cond
+                            (= i 0)                         (:pprint child)
+                            (and (= i 1) first-arg-inline?) (str sum " " (:pprint child))
+                            (not= (dec i) prev-i)           (str sum " ..." line-sep (:pprint child))
+                            :else                           (str sum line-sep (:pprint child)))
+                      final? (= child (last results))
+                      sum (if (and final? (not= i (dec (count children))))
+                            (str sum " ...")
+                            sum)]
+                   (if final? sum (assoc result :prev-i i :sum sum))))]
           {:children results
-           :pprint (string/join line-sep result-lines)
-           :limits limits})
+           :limits limits
+           :pprint (reduce finalize {} results)})
 
         ; process child
         (let [w (- width (if (seq results) indent 0))
