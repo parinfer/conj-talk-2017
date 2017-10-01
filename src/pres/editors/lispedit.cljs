@@ -36,7 +36,7 @@
 (defn set-box-curr! [focus-path]
   (set! node-pprint (pprint top-node (pprint-limits focus-path)))
   (set! box-curr
-    (codebox/make (:pprint node-pprint)
+    (codebox/make (:pretty node-pprint)
       {:xy [100 100]
        :font-size 9})))
 
@@ -78,9 +78,15 @@
       (oset! ctx "strokeStyle" "#000")
       (ocall ctx "stroke"))))
 
-(defn draw-box-curr []
-  (oset! ctx "fillStyle" "#333")
-  (codebox/draw box-curr))
+; (defn path->pprint-path [path]
+;   (->> (:nodes box-curr)
+;        (filter #(:path))))
+
+(defn draw-editor []
+  (oset! ctx "fillStyle" "#99A")
+  (codebox/draw box-curr)
+  (let [{:keys [path-hover]} (get-state)]))
+        ; path (get-state)]))
 
 ;;----------------------------------------------------------------------
 ;; Draw all
@@ -88,7 +94,7 @@
 
 (defn draw []
   (draw-box-full)
-  (draw-box-curr)
+  (draw-editor)
   (update-cursor))
 
 ;;----------------------------------------------------------------------
@@ -116,9 +122,6 @@
         {:keys [path-hover path-curr]} (get-state)
         new-path-hover (:path (pick-node box-full [x y]))]
     (when-not (= new-path-hover path-hover)
-      (if new-path-hover
-        (set-box-curr! new-path-hover)
-        (set-box-curr! path-curr))
       (set-state!
         (-> (get-state)
             (assoc :path-hover new-path-hover))))))

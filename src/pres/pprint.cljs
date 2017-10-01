@@ -23,7 +23,7 @@
    own-line?]
   (when (<= (count text) width)
     ; final result
-    {:pprint text
+    {:pretty text
      :path path
      :limits (cond-> limits
                own-line? (update (path->lines-type path focus) dec))}))
@@ -40,13 +40,13 @@
 
         ; final result
         {:children results
-         :pprint (string/join " " (map :pprint results))
+         :pretty (string/join " " (map :pretty results))
          :limits (cond-> limits
                    own-line? (update (path->lines-type path focus) dec))}
 
         ; process child
         (when-let [result (pprint* child limits false)]
-          (let [child-width (count (:pprint result))
+          (let [child-width (count (:pretty result))
                 space-width (if (seq results) 1 0)]
             (recur
               next-children
@@ -66,12 +66,12 @@
 
           ; final result
           {:children results
-           :pprint (string/join " " (conj (mapv :pprint results) "..."))
+           :pretty (string/join " " (conj (mapv :pretty results) "..."))
            :limits (cond-> limits
                      own-line? (update (path->lines-type path focus) dec))}
 
           ; process child
-          (let [child-width (count (:pprint result))
+          (let [child-width (count (:pretty result))
                 space-width (if (seq results) 1 0)]
             (recur
               next-children
@@ -109,25 +109,36 @@
       (if-not child
 
         ; create final result
-        (let [results (sort-by #(last (:path %)) results)
+        (let [results (vec (sort-by #(last (:path %)) results))
               finalize
-              (fn [{:keys [prev-i sum] :as result}
+              (fn [{:keys [prev-i pretty new-children] :as result}
                    {:keys [path] :as child}]
                 (let [i (last path)
-                      s (string/join line-sep (string/split-lines (:pprint child)))
-                      sum (cond
-                            (= i 0)                         s
-                            (and (= i 1) first-arg-inline?) (str sum " " s)
-                            (not= i (inc prev-i))           (str sum line-sep "..." line-sep s)
-                            :else                           (str sum line-sep s))
+                      s (string/join line-sep (string/split-lines (:pretty child)))
+                      gap? (not= i (inc prev-i))
+                      new-children (cond-> new-children
+                                    gap? (conj nil)) ; nil represents ellipsis pseudo-child
+                      pretty (cond
+                               (= i 0)                         s
+                               (and (= i 1) first-arg-inline?) (str pretty " " s)
+                               gap?                            (str pretty line-sep "..." line-sep s)
+                               :else                           (str pretty line-sep s))
                       final? (= child (last results))
-                      sum (if (and final? (not= i (dec (count children))))
-                            (str sum " ...")
-                            sum)]
-                   (if final? sum (assoc result :prev-i i :sum sum))))]
-          {:children results
+                      pretty (if (and final? (not= i (dec (count children))))
+                               (str pretty " ...")
+                               pretty)]
+                  (assoc result
+                    :prev-i i
+                    :pretty pretty
+                    :new-children (conj new-children child))))
+
+              final (reduce finalize
+                      {:new-children []}
+                      results)]
+
+          {:children (:new-children final)
            :limits limits
-           :pprint (reduce finalize {} results)})
+           :pretty (:pretty final)})
 
         ; process child
         (let [w (- width (if (seq results) indent 0))
@@ -160,7 +171,7 @@
         dec-depth? (if focus? (>= (count path) (count focus)) true)]
     (if (zero? (limits depth-key))
       (when (>= width (count "&"))
-        {:pprint "&"
+        {:pretty "&"
          :path path
          :limits (cond-> limits
                    own-line? (update (path->lines-type path focus) dec))})
@@ -175,7 +186,7 @@
           (when result
             (assoc result
               :path path
-              :pprint (str "(" (:pprint result) ")")
+              :pretty (str "(" (:pretty result) ")")
               :limits (assoc (:limits result)
                         :depth depth
                         :focus-depth focus-depth))))))))
