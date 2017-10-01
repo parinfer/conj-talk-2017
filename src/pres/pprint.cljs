@@ -103,12 +103,12 @@
     (loop [[child & next-children] (children-in-render-order node limits)
            results []
            limits limits
-           ellipsis nil
            first-arg-inline? false]
       (if-not child
 
         ; create final result
         ; TODO: insert an ellipsis inside each gap in index (append to previous line)
+        ; use a reduce function with a result structure {prev-index, result-lines}
         (let [[func arg & others] (sort #(last (:path %)) results)
               both (str (:pprint func) " " (:pprint arg))
               result-lines (apply concat (map #(string/split-lines (:pprint %)) children))
@@ -130,19 +130,15 @@
           (if-let [result (pprint* child (assoc limits :width w) (not inline?))]
 
             ; child fits
-            (recur
-              next-children
+            (recur next-children
               (conj results result)
               (:limits result)
-              false
               (or inline? first-arg-inline?))
 
             ; child does not fit
-            (recur
-              next-children
+            (recur next-children
               results
               limits
-              true
               first-arg-inline?)))))))
 
 (defn pprint-list
