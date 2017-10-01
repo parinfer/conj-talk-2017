@@ -81,6 +81,16 @@
 (def inline-first-arg?
   #{"lambda" "prog" "setq"})
 
+(defn order-child-lines-by-render
+  [node limits]
+  ; TODO: if proper ancestor of focus, create new children in order:
+  ;       1. first child
+  ;       2. focus child
+  ;       3. children before focus child (reversed)
+  ;       4. children after focus child
+  ; (just sort the results by original index when done)
+  (:children node))
+
 (defn line-per-child
   [{:keys [text paren children path] :as node}
    {:keys [focus depth width lines] :as limits}]
@@ -88,14 +98,7 @@
   (let [indent (if (:paren (first children)) 1 2)
         line-sep (apply str "\n" (repeat indent " "))]
 
-    ; TODO: if proper ancestor of focus, create new children in order:
-    ;       1. first child
-    ;       2. focus child
-    ;       3. children before focus child (reversed)
-    ;       4. children after focus child
-    ; (just sort the results by original index when done)
-
-    (loop [[child & next-children] children
+    (loop [[child & next-children] (order-child-lines-by-render node limits)
            results []
            limits limits
            ellipsis nil
@@ -103,7 +106,8 @@
       (if-not child
 
         ; create final result
-        (let [[func arg & others] results
+        ; TODO: insert an ellipsis inside each gap in index (append to previous line)
+        (let [[func arg & others] (sort #(last (:path %)) results)
               both (str (:pprint func) " " (:pprint arg))
               result-lines (apply concat (map #(string/split-lines (:pprint %)) children))
               result-lines (if first-arg-inline? ; NOTE: assuming (>= width (count both))
@@ -117,9 +121,9 @@
         (let [w (- width (if (seq results) indent 0))
 
               ; special case, allow the first arg of certain functions to be inline
-              inline? (and (= 1 (count results))
-                           (let [func (:pprint (first results))]
-                             (inline-first-arg? func)))]
+              ; e.g. `bar` is inline here: `(foo bar`
+              inline? (and (= 1 (last (:path child)))
+                           (inline-first-arg? (:text (first children))))]
 
           (if-let [result (pprint* child (assoc limits :width w) (not inline?))]
 
