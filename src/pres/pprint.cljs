@@ -7,8 +7,6 @@
 
 (declare pprint*)
 
-(declare in-focus?)
-
 (defn in-focus? [path focus]
   (or (descendant? path focus)
       (descendant? focus path)))
@@ -27,7 +25,7 @@
   (when (<= (count text) width)
     ; final result
     {:pprint text
-     :orig-path path
+     :path path
      :limits (cond-> limits
                own-line? (update (path->lines-type path focus) dec))}))
 
@@ -81,15 +79,19 @@
 (def inline-first-arg?
   #{"lambda" "prog" "setq"})
 
-(defn order-child-lines-by-render
-  [node limits]
-  ; TODO: if proper ancestor of focus, create new children in order:
-  ;       1. first child
-  ;       2. focus child
-  ;       3. children before focus child (reversed)
-  ;       4. children after focus child
-  ; (just sort the results by original index when done)
-  (:children node))
+(defn children-in-render-order
+  [{:keys [text paren children path] :as node}
+   {:keys [focus depth width lines] :as limits}]
+  (let [[first-child & others] children]
+    (if-let [focus-child (first (filter #(descendant? focus (:path %))))]
+      (let [i (last (:path focus-child))
+            pre (filter #(< 0 (last (:path %)) i) children)
+            post (filter #(> (last (:path %)) i) children)]
+        (concat
+          (distinct [first-child focus-child])
+          (reverse pre)
+          post))
+      children)))
 
 (defn line-per-child
   [{:keys [text paren children path] :as node}
@@ -98,7 +100,7 @@
   (let [indent (if (:paren (first children)) 1 2)
         line-sep (apply str "\n" (repeat indent " "))]
 
-    (loop [[child & next-children] (order-child-lines-by-render node limits)
+    (loop [[child & next-children] (children-in-render-order node limits)
            results []
            limits limits
            ellipsis nil
@@ -154,7 +156,7 @@
     (if (zero? (limits depth-key))
       (when (>= width (count "&"))
         {:pprint "&"
-         :orig-path path
+         :path path
          :limits (cond-> limits
                    own-line? (update (path->lines-type path focus) dec))})
       (when (>= width (count "()"))
@@ -167,7 +169,7 @@
                            (inline-children-truncated node limits own-line?)))]
           (when result
             (assoc result
-              :orig-path path
+              :path path
               :pprint (str "(" (:pprint result) ")"))))))))
 
 (defn pprint*
