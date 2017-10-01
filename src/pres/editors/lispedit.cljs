@@ -32,7 +32,7 @@
                   :focus-depth 8
                   :lines 40
                   :focus-lines 10
-                  :context-lines 20}))
+                  :pre-lines 20}))
       {:xy [100 50]
        :font-size 7.5})))
 

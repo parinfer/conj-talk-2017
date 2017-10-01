@@ -194,7 +194,6 @@
   (let [pre-lines (- (max pre-lines (count focus))
                      (count focus))
         lines (max lines (+ pre-lines focus-lines))]
-    ; (println (count focus) context-lines)
     (assoc limits
       :pre-lines pre-lines
       :post-lines (- lines pre-lines focus-lines)
