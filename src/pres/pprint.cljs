@@ -112,11 +112,12 @@
               (fn [{:keys [prev-i sum] :as result}
                    {:keys [path] :as child}]
                 (let [i (last path)
+                      s (string/join line-sep (string/split-lines (:pprint child)))
                       sum (cond
-                            (= i 0)                         (:pprint child)
-                            (and (= i 1) first-arg-inline?) (str sum " " (:pprint child))
-                            (not= (dec i) prev-i)           (str sum " ..." line-sep (:pprint child))
-                            :else                           (str sum line-sep (:pprint child)))
+                            (= i 0)                         s
+                            (and (= i 1) first-arg-inline?) (str sum " " s)
+                            (not= i (inc prev-i))           (str sum " ..." line-sep s)
+                            :else                           (str sum line-sep s))
                       final? (= child (last results))
                       sum (if (and final? (not= i (dec (count children))))
                             (str sum " ...")
