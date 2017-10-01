@@ -82,16 +82,17 @@
 (defn children-in-render-order
   [{:keys [text paren children path] :as node}
    {:keys [focus depth width lines] :as limits}]
-  (let [[first-child & others] children]
-    (if-let [focus-child (first (filter #(descendant? focus (:path %))))]
-      (let [i (last (:path focus-child))
-            pre (filter #(< 0 (last (:path %)) i) children)
-            post (filter #(> (last (:path %)) i) children)]
-        (concat
-          (distinct [first-child focus-child])
-          (reverse pre)
-          post))
-      children)))
+  (if-let [focus-child (->> children
+                            (filter #(descendant? focus (:path %)))
+                            (first))]
+    (let [i (last (:path focus-child))
+          pre (filter #(< 0 (last (:path %)) i) children)
+          post (filter #(> (last (:path %)) i) children)]
+      (concat
+        (distinct [(first children) focus-child])
+        (reverse pre)
+        post))
+    children))
 
 (defn line-per-child
   [{:keys [text paren children path] :as node}

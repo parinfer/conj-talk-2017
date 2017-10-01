@@ -25,14 +25,14 @@
 (defn set-box-curr! [focus-path]
   (set! box-curr
     (codebox/make
-      (pprint top-node
-        {:depth 4
-         :width 70
-         :focus focus-path
-         :focus-depth 8
-         :lines 40
-         :focus-lines 10
-         :context-lines 20})
+      (:pprint (pprint top-node
+                 {:depth 4
+                  :width 70
+                  :focus focus-path
+                  :focus-depth 8
+                  :lines 40
+                  :focus-lines 10
+                  :context-lines 20}))
       {:xy [100 50]
        :font-size 7.5})))
 
