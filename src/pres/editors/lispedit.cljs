@@ -39,6 +39,7 @@
     (codebox/make (:pretty top-pprint)
       {:xy [100 100]
        :font-size 9})))
+
 ;;----------------------------------------------------------------------
 ;; State
 ;;----------------------------------------------------------------------
@@ -86,12 +87,16 @@
 (defn draw-editor []
   (oset! ctx "fillStyle" "#CCD")
   (codebox/draw box-curr)
-  (let [{:keys [path-curr]} (get-state)
-        pprint-path (path->pprint-path path-curr)
-        curr (codebox/lookup box-curr pprint-path)]
+  (let [{:keys [path-curr path-hover]} (get-state)
+        curr (when path-curr (codebox/lookup box-curr (path->pprint-path path-curr)))
+        hover (when path-hover (codebox/lookup box-curr (path->pprint-path path-hover)))]
     (when curr
       (oset! ctx "fillStyle" "#333")
-      (codebox/draw box-curr curr))))
+      (codebox/draw box-curr curr))
+    (when hover
+      (codebox/draw-region box-curr hover)
+      (oset! ctx "strokeStyle" "#000")
+      (ocall ctx "stroke"))))
 
 ;;----------------------------------------------------------------------
 ;; Draw all
