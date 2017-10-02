@@ -37,7 +37,7 @@
 ;; State
 ;;----------------------------------------------------------------------
 
-(def state-key :bbn)
+(def state-key :dedit)
 
 (def init-state
   {:top nil

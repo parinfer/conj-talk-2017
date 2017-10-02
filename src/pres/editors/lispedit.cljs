@@ -46,7 +46,7 @@
 ;; State
 ;;----------------------------------------------------------------------
 
-(def state-key :bbn)
+(def state-key :lispedit)
 
 (def init-state
   {:path-curr [0]
