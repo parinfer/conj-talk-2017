@@ -4,7 +4,7 @@
     [pres.camera :refer [mouse->cam] :as camera]
     [pres.state :refer [state]]
     [pres.codebox :as codebox]
-    [pres.reader :refer [print-node path-diff descendant? walk]]
+    [pres.reader :refer [print-node path-diff descendant? walk node-from-path]]
     [pres.pprint :refer [pprint]]
     [pres.examples :as examples]
     [clojure.string :as string]
@@ -30,16 +30,15 @@
    :focus-lines 10
    :pre-lines 10})
 
-(def node-pprint nil)
+(def top-pprint nil)
 
 (def box-curr)
 (defn set-box-curr! [focus-path]
-  (set! node-pprint (pprint top-node (pprint-limits focus-path)))
+  (set! top-pprint (pprint top-node (pprint-limits focus-path)))
   (set! box-curr
-    (codebox/make (:pretty node-pprint)
+    (codebox/make (:pretty top-pprint)
       {:xy [100 100]
        :font-size 9})))
-
 ;;----------------------------------------------------------------------
 ;; State
 ;;----------------------------------------------------------------------
@@ -79,13 +78,13 @@
       (ocall ctx "stroke"))))
 
 (defn path->pprint-path [path]
-  (->> (:nodes box-curr)
+  (->> (walk top-pprint)
        (filter #(= path (:path %)))
        (first)
        (:walk-path)))
 
 (defn draw-editor []
-  (oset! ctx "fillStyle" "#99A")
+  (oset! ctx "fillStyle" "#CCD")
   (codebox/draw box-curr)
   (let [{:keys [path-curr]} (get-state)
         pprint-path (path->pprint-path path-curr)

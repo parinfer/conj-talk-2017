@@ -115,22 +115,23 @@
                    {:keys [path] :as child}]
                 (let [i (last path)
                       s (string/join line-sep (string/split-lines (:pretty child)))
-                      gap? (not= i (inc prev-i))
+                      mid-gap? (and prev-i (not= i (inc prev-i)))
+                      end? (= child (last results))
+                      end-gap? (and end? (not= i (dec (count children))))
                       new-children (cond-> new-children
-                                    gap? (conj nil)) ; nil represents ellipsis pseudo-child
+                                    mid-gap? (conj nil) ; nil represents ellipsis pseudo-child
+                                    true (conj child)
+                                    end-gap? (conj nil))
                       pretty (cond
                                (= i 0)                         s
                                (and (= i 1) first-arg-inline?) (str pretty " " s)
-                               gap?                            (str pretty line-sep "..." line-sep s)
+                               mid-gap?                        (str pretty line-sep "..." line-sep s)
                                :else                           (str pretty line-sep s))
-                      final? (= child (last results))
-                      pretty (if (and final? (not= i (dec (count children))))
-                               (str pretty " ...")
-                               pretty)]
+                      pretty (cond-> pretty end-gap? (str " ..."))]
                   (assoc result
                     :prev-i i
                     :pretty pretty
-                    :new-children (conj new-children child))))
+                    :new-children new-children)))
 
               final (reduce finalize
                       {:new-children []}
