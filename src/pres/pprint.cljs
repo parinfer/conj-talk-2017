@@ -53,6 +53,11 @@
               (update limits :width - child-width space-width)
               (conj results result))))))))
 
+(defn ellipsis-node [path a b]
+  ; all indexes i such that a<=i<b)
+  {:elided-paths (->> (range a b)
+                      (mapv #(conj path %)))})
+
 (defn inline-children-truncated
   [{:keys [text paren children path] :as node}
    {:keys [focus depth width lines] :as limits}
@@ -65,7 +70,7 @@
         (if-not result
 
           ; final result
-          {:children results
+          {:children (conj results (ellipsis-node path (count results) (count children)))
            :pretty (string/join " " (conj (mapv :pretty results) "..."))
            :limits (cond-> limits
                      own-line? (update (path->lines-type path focus) dec))}
@@ -96,11 +101,6 @@
         post))
     children))
 
-(defn ellipsis-node [path a b]
-  ; all indexes i such that a<i<b
-  {:elided-paths (->> (range (inc a) b)
-                      (map #(conj path %)))})
-
 (defn line-per-child
   [{:keys [text paren children path] :as node}
    {:keys [focus depth width lines] :as limits}]
@@ -126,9 +126,9 @@
                       end-gap? (and end? (not= i end-i))
                       parent-path (vec (butlast path))
                       new-children (cond-> new-children
-                                    mid-gap? (conj (ellipsis-node parent-path prev-i i))
+                                    mid-gap? (conj (ellipsis-node parent-path (inc prev-i) i))
                                     true (conj child)
-                                    end-gap? (conj (ellipsis-node parent-path i (inc end-i))))
+                                    end-gap? (conj (ellipsis-node parent-path (inc i) (inc end-i))))
                       pretty (cond
                                (= i 0)                         s
                                (and (= i 1) first-arg-inline?) (str pretty " " s)
