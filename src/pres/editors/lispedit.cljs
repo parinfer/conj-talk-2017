@@ -130,7 +130,9 @@
 (defn on-mouse-move [e]
   (let [[x y] (mouse->cam e)
         {:keys [path-hover path-curr]} (get-state)
-        new-path-hover (:path (pick-node box-full [x y]))]
+        new-path-hover (or (:path (pick-node box-full [x y]))
+                           (when-let [node (pick-node box-curr [x y])]
+                             (:path (node-from-path top-pprint (rest (:path node))))))]
     (when-not (= new-path-hover path-hover)
       (set-state!
         (-> (get-state)
