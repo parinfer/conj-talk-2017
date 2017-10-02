@@ -132,7 +132,9 @@
 
 (defn pick-node [code [x y]]
   (->> (codebox/pick-nodes code [x y])
-       (filter #(or (:paren %) (= (:text %) "&")))
+       (filter #(or (:paren %)
+                    (= (:text %) "&")
+                    (= (:text %) "...")))
        (sort-by #(count (:path %)))
        (last)))
 
@@ -141,7 +143,9 @@
         {:keys [mousedown path-hover path-curr]} (get-state)
         new-path-hover (or (:path (pick-node box-full [x y]))
                            (when-let [node (pick-node box-curr [x y])]
-                             (:path (node-from-path top-pprint (rest (:path node))))))]
+                             (let [pnode (node-from-path top-pprint (next (:path node)))]
+                               (or (:path pnode)
+                                   (first (:elided-paths pnode))))))]
     (when-not (= new-path-hover path-hover)
       (when mousedown
         (set-box-curr! new-path-hover))
