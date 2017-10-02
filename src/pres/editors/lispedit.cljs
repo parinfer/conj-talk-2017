@@ -38,7 +38,7 @@
   (set! box-curr
     (codebox/make (:pretty top-pprint)
       {:xy [100 100]
-       :font-size 9})))
+       :font-size 7.5})))
 
 ;;----------------------------------------------------------------------
 ;; State
@@ -48,7 +48,8 @@
 
 (def init-state
   {:path-curr [0]
-   :path-hover nil})
+   :path-hover nil
+   :mousedown false})
 
 (defn get-state
   ([] (get @state state-key))
@@ -119,7 +120,11 @@
       (set-state!
         (-> (get-state)
             (assoc :path-curr path-hover)
-            (dissoc :path-hover))))))
+            (dissoc :path-hover)
+            (assoc :mousedown true))))))
+
+(defn on-mouse-up [e]
+  (set-state! (assoc (get-state) :mousedown false)))
 
 (defn pick-node [code [x y]]
   (->> (codebox/pick-nodes code [x y])
@@ -129,14 +134,17 @@
 
 (defn on-mouse-move [e]
   (let [[x y] (mouse->cam e)
-        {:keys [path-hover path-curr]} (get-state)
+        {:keys [mousedown path-hover path-curr]} (get-state)
         new-path-hover (or (:path (pick-node box-full [x y]))
                            (when-let [node (pick-node box-curr [x y])]
                              (:path (node-from-path top-pprint (rest (:path node))))))]
     (when-not (= new-path-hover path-hover)
+      (when mousedown
+        (set-box-curr! new-path-hover))
       (set-state!
         (-> (get-state)
-            (assoc :path-hover new-path-hover))))))
+            (assoc :path-hover new-path-hover
+                   :path-curr (if mousedown new-path-hover path-curr)))))))
 
 ;;----------------------------------------------------------------------
 ;; Load
@@ -146,8 +154,10 @@
   (set-box-curr! (:path top-node))
   (set-state! init-state)
   (ocall js/window "addEventListener" "mousedown" on-mouse-down)
+  (ocall js/window "addEventListener" "mouseup" on-mouse-up)
   (ocall js/window "addEventListener" "mousemove" on-mouse-move))
 
 (defn cleanup! []
   (ocall js/window "removeEventListener" "mousedown" on-mouse-down)
+  (ocall js/window "removeEventListener" "mouseup" on-mouse-up)
   (ocall js/window "removeEventListener" "mousemove" on-mouse-move))

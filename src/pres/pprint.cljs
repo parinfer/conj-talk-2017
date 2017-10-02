@@ -96,6 +96,10 @@
         post))
     children))
 
+(defn ellipsis-node [a b]
+  ; all indexes i such that a<i<b
+  {:ellipsis (set (range (inc a) b))})
+
 (defn line-per-child
   [{:keys [text paren children path] :as node}
    {:keys [focus depth width lines] :as limits}]
@@ -117,11 +121,12 @@
                       s (string/join line-sep (string/split-lines (:pretty child)))
                       mid-gap? (and prev-i (not= i (inc prev-i)))
                       end? (= child (last results))
-                      end-gap? (and end? (not= i (dec (count children))))
+                      end-i (dec (count children))
+                      end-gap? (and end? (not= i end-i))
                       new-children (cond-> new-children
-                                    mid-gap? (conj nil) ; nil represents ellipsis pseudo-child
+                                    mid-gap? (conj (ellipsis-node prev-i i))
                                     true (conj child)
-                                    end-gap? (conj nil))
+                                    end-gap? (conj (ellipsis-node i (inc end-i))))
                       pretty (cond
                                (= i 0)                         s
                                (and (= i 1) first-arg-inline?) (str pretty " " s)
