@@ -1,7 +1,7 @@
 (ns pres.examples)
 
 (def foo (subs "
- ((foo bar baz hello world this is a really long list) 
+ ((foo bar baz hello world this is a really long list)
   (foo bar baz hello world this is a really long list))
 " 1))
 
@@ -14,6 +14,27 @@
      (t (cons
           (car x)
           (append (cdr x) y)))))
+" 1))
+
+(def short-interlisp-func (subs "
+ (lambda (x)
+   (if (lessp x 2)
+     then 1
+     else (times x
+            (fact (sub1 x)))))
+" 1))
+
+(def medium-func (subs "
+ (prog ((l l)
+        (uf l))
+   lp (cond
+        ((null (seq l (cdr l)))
+         (error!))
+        ((null (cdr (fmemb (car l) (cardr l))))
+         (go lop)))
+   (editcom (quote nx))
+   (setq unfind uf)
+   (return l))
 " 1))
 
 ; code example from page 38 of LISP/VM User's Guide:
