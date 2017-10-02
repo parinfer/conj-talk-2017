@@ -91,7 +91,7 @@
     (oset! ctx "fillStyle" "#333")
     (codebox/draw box-full curr)
     (when-let [hover (codebox/lookup box-full path-hover)]
-      (codebox/draw-region box-full hover)
+      (codebox/draw-bounding-box box-full hover)
       (oset! ctx "strokeStyle" "#000")
       (ocall ctx "stroke"))))
 
@@ -106,7 +106,7 @@
             line-h codebox/line-h
             [x y] (:xy box-curr)]
         (when hover
-          (codebox/draw-region box-curr hover)
+          (codebox/draw-bounding-box box-curr hover)
           (oset! ctx "strokeStyle" "#000")
           (ocall ctx "stroke"))
         (when (= 2 (count path))

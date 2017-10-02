@@ -85,7 +85,7 @@
     (oset! ctx "fillStyle" "#333")
     (codebox/draw box-full curr)
     (when-let [hover (codebox/lookup box-full path-hover)]
-      (codebox/draw-region box-full hover)
+      (codebox/draw-bounding-box box-full hover)
       (oset! ctx "strokeStyle" "#000")
       (ocall ctx "stroke")))
 
@@ -98,7 +98,7 @@
        (let [path (vec (cons 0 (drop (count path-curr) path-hover)))
              hover (codebox/lookup box-curr path)]
          (when hover
-           (codebox/draw-region box-curr hover)
+           (codebox/draw-bounding-box box-curr hover)
            (oset! ctx "strokeStyle" "#000")
            (ocall ctx "stroke")))))))
 

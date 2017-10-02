@@ -6,6 +6,11 @@
     [pres.misc :refer [close-paren]]
     [oops.core :refer [ocall oget oset!]]))
 
+;; Coord naming conventions:
+;;   x/y = cam coords (relative to box)
+;;   mx/my = mouse coords (absolute)
+;;   cx/cy = char coords
+
 ;;----------------------------------------------------------------------
 ;; Font drawing
 ;;----------------------------------------------------------------------
@@ -14,6 +19,8 @@
 (def char-h nil)
 (def char-w nil)
 (def line-h nil)
+
+(def underline-pad 0.15) ; distance of underline from line bottom (in fraction of char-h)
 
 (defn use-font! [h]
   (oset! ctx "font" (str h "px Menlo"))
@@ -37,23 +44,23 @@
 ;; Math
 ;;----------------------------------------------------------------------
 
-(defmulti inside-area? (fn [m [name & coords]] name))
-(defmethod inside-area? :rect [[mx my] [_name x y w h]]
-  (and (<= x mx (+ x w))
-       (<= y my (+ y h))))
-(defmethod inside-area? :crect [m [_name x0 y0 x1 y1 x2 y2]]
-  (or (inside-area? m [:rect x0 y0 (- x2 x0) (- y2 y0)])
-      (inside-area? m [:rect x0 y2 (- x1 x0) (- y1 y2)])))
+(defmulti inside-shape? (fn [xy [name & coords]] name))
+(defmethod inside-shape? :rect [[x y] [_name x0 y0 w h]]
+  (and (<= x0 x (+ x0 w))
+       (<= y0 y (+ y0 h))))
+(defmethod inside-shape? :crect [xy [_name x0 y0 x1 y1 x2 y2]]
+  (or (inside-shape? xy [:rect x0 y0 (- x2 x0) (- y2 y0)])
+      (inside-shape? xy [:rect x0 y2 (- x1 x0) (- y1 y2)])))
 
 ;;----------------------------------------------------------------------
 ;; Cam Coordinates
 ;;----------------------------------------------------------------------
 
 ; cam coords relative to our box
-(defn rel-cam [g [x y]]
+(defn rel-cam [g [mx my]]
   (let [[gx gy] (:xy g)]
-    [(- x gx)
-     (- y gy)]))
+    [(- mx gx)
+     (- my gy)]))
 
 (defn cam->code [[x y]]
   [(Math/floor (/ x char-w))
@@ -63,11 +70,11 @@
   [(Math/round (/ x char-w))
    (Math/floor (/ y line-h))])
 
-(defn code->cam [[x y]]
-  [(* x char-w)
-   (* y line-h)])
+(defn code->cam [[cx cy]]
+  [(* cx char-w)
+   (* cy line-h)])
 
-(defn code-area->cam [[name & coords]]
+(defn code-shape->cam [[name & coords]]
   (->> (partition 2 coords)
        (map code->cam)
        (flatten)
@@ -75,7 +82,7 @@
        (vec)))
 
 ;;----------------------------------------------------------------------
-;; Code Coordinates
+;; Node helpers
 ;;----------------------------------------------------------------------
 
 (defn multiline-node? [{:keys [xy xy-end] :as node}]
@@ -84,13 +91,17 @@
           [_ y1] xy-end]
       (not= y y1))))
 
+;;----------------------------------------------------------------------
+;; Node box coordinates
+;;----------------------------------------------------------------------
+
 ; x,y -> +-----------+
 ;        |(foo       |
 ;        |  (+ 1 2 3)|
 ;        |      +----+ <- x2,y2
 ;        |  bar)|
 ;        +------+ <- x1,y1
-(defn node->multiline-area [g {:keys [xy xy-end] :as node}]
+(defn node->multiline-box [g {:keys [xy xy-end] :as node}]
   (let [[x y] xy
         [x1 y1] (map inc xy-end)
         w (- x1 x)
@@ -101,17 +112,49 @@
       [:rect x y w h]
       [:crect x y x1 y1 x2 y2])))
 
-(defn node->area [g {:keys [text xy xy-end paren] :as node}]
+(defn node->box-shape [g {:keys [text xy xy-end paren] :as node}]
   (if (multiline-node? node)
-    (node->multiline-area g node)
+    (node->multiline-box g node)
     (let [[x y] xy
           [x1 _] xy-end]
       (if paren
         [:rect x y (- (inc x1) x) 1]
         [:rect x y (count text) 1]))))
 
-(defn inside-node? [g m node]
-  (inside-area? m (code-area->cam (node->area g node))))
+(defn inside-node-box? [g xy node]
+  (inside-shape? xy (code-shape->cam (node->box-shape g node))))
+
+;;----------------------------------------------------------------------
+;; Node underline coordinates
+;;----------------------------------------------------------------------
+
+(defn node->multiline-underlines [g {:keys [xy xy-end] :as node}]
+  (let [[x0 y0] xy
+        [x1 y1] xy-end]
+    (for [y (range y0 (inc y1))]
+      (let [line (get (:lines g) y)
+            xl (if (= y y0) x0 (count (re-find #"\s*" line))) ; left
+            xr (if (= y y1) (inc x1) (count line)) ; right
+            yb (- (inc y) underline-pad)] ; bottom
+        [:line xl yb xr yb]))))
+
+(defn node->underlines [g {:keys [text xy xy-end paren] :as node}]
+  (if (multiline-node? node)
+    (node->multiline-underlines g node)
+    (let [[xl y] xy
+          xr (if paren
+               (inc (first xy-end))
+               (+ xl (count text)))
+          yb (- (inc y) underline-pad)]
+      [; shape list of size 1
+       [:line xl yb xr yb]])))
+
+(declare char-at)
+
+(defn inside-node-text? [g xy node]
+  (and (inside-node-box? g xy node)
+       (when-let [char (char-at g (cam->code xy))]
+         (not= char " "))))
 
 ;;----------------------------------------------------------------------
 ;; Draw
@@ -143,19 +186,28 @@
 (defn restore []
   (ocall ctx "restore"))
 
-(defmulti draw-area (fn [[name & coords]] name))
-(defmethod draw-area :rect [[_name x y w h]]
+(defmulti draw-shape (fn [[name & coords]] name))
+(defmethod draw-shape :rect [[_name x y w h]]
   (ocall ctx "beginPath")
   (ocall ctx "rect" x y w h))
-(defmethod draw-area :crect [[_name x0 y0 x1 y1 x2 y2]]
+(defmethod draw-shape :crect [[_name x0 y0 x1 y1 x2 y2]]
   (ocall ctx "beginPath")
   (ocall ctx "moveTo" x0 y0)
   (doseq [[x y] [[x2 y0] [x2 y2] [x1 y2] [x1 y1] [x0 y1]]]
     (ocall ctx "lineTo" x y))
   (ocall ctx "closePath"))
+(defmethod draw-shape :line [[_name x0 y0 x1 y1]]
+  (ocall ctx "beginPath")
+  (ocall ctx "moveTo" x0 y0)
+  (ocall ctx "lineTo" x1 y1)
+  (ocall ctx "stroke"))
 
-(defn draw-region* [g node]
-  (draw-area (code-area->cam (node->area g node))))
+(defn draw-bounding-box* [g node]
+  (draw-shape (code-shape->cam (node->box-shape g node))))
+
+(defn draw-underline* [g node]
+  (doseq [shape (node->underlines g node)]
+    (draw-shape (code-shape->cam shape))))
 
 ;;----------------------------------------------------------------------
 ;; Public
@@ -163,12 +215,8 @@
 ;; Usage:
 ;;  (let [g (make "(foo bar\n  baz)")]
 ;;    (draw g)
-;;    (draw-region g)) ;; fill or stroke after
+;;    (draw-bounding-box g)) ;; fill or stroke after
 ;;----------------------------------------------------------------------
-
-;; Coord naming conventions:
-;;   mx/my = mouse coords
-;;   cx/cy = char coords
 
 (defn draw
   ([g] (draw g (:tree g)))
@@ -177,11 +225,18 @@
    (draw* g node)
    (restore)))
 
-(defn draw-region
-  ([g] (draw-region g (:tree g)))
+(defn draw-bounding-box
+  ([g] (draw-bounding-box g (:tree g)))
   ([g node]
    (setup-draw g)
-   (draw-region* g node)
+   (draw-bounding-box* g node)
+   (restore)))
+
+(defn draw-underline
+  ([g] (draw-bounding-box g (:tree g)))
+  ([g node]
+   (setup-draw g)
+   (draw-underline* g node)
    (restore)))
 
 (defn draw-cursor [g [cx cy]]
@@ -193,11 +248,15 @@
     (ocall ctx "stroke"))
   (restore))
 
-(defn pick-nodes [g [mx my]]
-  (setup-font g)
-  (let [[x y] (rel-cam g [mx my])]
-    (->> (:nodes g)
-         (filter #(inside-node? g [x y] %)))))
+(defn pick-nodes
+  ([g [mx my]] (pick-nodes g [mx my] :box))
+  ([g [mx my] shape]
+   (setup-font g)
+   (let [[x y] (rel-cam g [mx my])
+         inside? ({:box inside-node-box?
+                   :text inside-node-text?} shape)]
+     (->> (:nodes g)
+          (filter #(inside? g [x y] %))))))
 
 (defn char-coord-at [g [mx my]]
   (setup-font g)
