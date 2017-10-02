@@ -20,7 +20,7 @@
 (def char-w nil)
 (def line-h nil)
 
-(def underline-pad 0.15) ; distance of underline from line bottom (in fraction of char-h)
+(def underline-pad 0.1) ; distance of underline from line bottom (in fraction of char-h)
 
 (defn use-font! [h]
   (oset! ctx "font" (str h "px Menlo"))
