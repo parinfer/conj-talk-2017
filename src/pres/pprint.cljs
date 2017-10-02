@@ -96,9 +96,10 @@
         post))
     children))
 
-(defn ellipsis-node [a b]
+(defn ellipsis-node [path a b]
   ; all indexes i such that a<i<b
-  {:ellipsis (set (range (inc a) b))})
+  {:elided-paths (->> (range (inc a) b)
+                      (map #(conj path %)))})
 
 (defn line-per-child
   [{:keys [text paren children path] :as node}
@@ -123,10 +124,11 @@
                       end? (= child (last results))
                       end-i (dec (count children))
                       end-gap? (and end? (not= i end-i))
+                      parent-path (vec (butlast path))
                       new-children (cond-> new-children
-                                    mid-gap? (conj (ellipsis-node prev-i i))
+                                    mid-gap? (conj (ellipsis-node parent-path prev-i i))
                                     true (conj child)
-                                    end-gap? (conj (ellipsis-node i (inc end-i))))
+                                    end-gap? (conj (ellipsis-node parent-path i (inc end-i))))
                       pretty (cond
                                (= i 0)                         s
                                (and (= i 1) first-arg-inline?) (str pretty " " s)

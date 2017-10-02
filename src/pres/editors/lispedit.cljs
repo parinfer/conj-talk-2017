@@ -79,9 +79,13 @@
       (oset! ctx "strokeStyle" "#000")
       (ocall ctx "stroke"))))
 
+(defn pprint-node-for-path? [node path]
+  (or (= path (:path node))
+      (some #(descendant? path %) (:elided-paths node))))
+
 (defn path->pprint-path [path]
   (->> (walk top-pprint)
-       (filter #(= path (:path %)))
+       (filter #(pprint-node-for-path? % path))
        (first)
        (:walk-path)))
 
