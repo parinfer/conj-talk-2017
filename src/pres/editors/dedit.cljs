@@ -75,7 +75,7 @@
     (when nxt-node
       (ocall ctx "save")
       ; (ocall ctx "translate" 0 -0.5)
-      (ocall ctx "setLineDash" #js[5 2.5])
+      (ocall ctx "setLineDash" #js[3 1])
       (oset! ctx "strokeStyle" "#000")
       (codebox/draw-underline box nxt-node)
       (when (and top-node nxt-node)
