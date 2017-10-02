@@ -9,6 +9,9 @@
     [clojure.string :as string]
     [oops.core :refer [ocall oget oset!]]))
 
+; built for teletype printers
+; showed structure in bite-sized pieces
+
 ;;----------------------------------------------------------------------
 ;; Codeboxes
 ;;----------------------------------------------------------------------

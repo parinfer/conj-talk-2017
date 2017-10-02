@@ -10,6 +10,8 @@
     [clojure.string :as string]
     [oops.core :refer [ocall oget oset!]]))
 
+; didn't use scrollbars.  experimented with fisheye pretty-printing
+
 ;;----------------------------------------------------------------------
 ;; Codeboxes
 ;;----------------------------------------------------------------------

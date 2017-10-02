@@ -10,6 +10,8 @@
     [clojure.string :as string]
     [oops.core :refer [ocall oget oset!]]))
 
+; line-based editing in bite-sized pieces
+
 ;;----------------------------------------------------------------------
 ;; Codeboxes
 ;;----------------------------------------------------------------------

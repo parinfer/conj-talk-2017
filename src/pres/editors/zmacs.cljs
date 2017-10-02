@@ -9,6 +9,9 @@
     [clojure.string :as string]
     [oops.core :refer [ocall oget oset!]]))
 
+; first traditional text editor with structure commands
+; also first to flash matching paren
+
 ;;----------------------------------------------------------------------
 ;; Codeboxes
 ;;----------------------------------------------------------------------
