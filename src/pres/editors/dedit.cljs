@@ -107,8 +107,10 @@
                :left path
                :middle (parent path)
                :right (when (= id (:id top))
-                        (common-ancestor path (:path top))))]
-    (set-top {:id id :path path})))
+                        (common-ancestor path (:path top)))
+               nil)]
+    (when path
+      (set-top {:id id :path path}))))
 
 (defn pick-node [box [x y]]
   (->> (codebox/pick-nodes box [x y])
@@ -120,9 +122,9 @@
         pick (fn [[id box]]
                {:id id
                 :path (:path (pick-node box [x y]))})]
-    (when-let [node (first (filter :path (pick boxes)))]
+    (when-let [node (first (filter :path (map pick boxes)))]
       (assoc node :button
-        ([:left :middle :right] (oget ctx "button"))))))
+        ([:left :middle :right] (oget e "button"))))))
 
 (defn on-mouse-down [e]
   (click (click-info e)))
@@ -132,6 +134,9 @@
 
 (defn on-mouse-move [e])
 
+(defn on-context-menu [e]
+  (ocall e "preventDefault"))
+
 ;;----------------------------------------------------------------------
 ;; Load
 ;;----------------------------------------------------------------------
@@ -140,9 +145,11 @@
   (set-state! init-state)
   (ocall js/window "addEventListener" "mousedown" on-mouse-down)
   (ocall js/window "addEventListener" "mouseup" on-mouse-up)
-  (ocall js/window "addEventListener" "mousemove" on-mouse-move))
+  (ocall js/window "addEventListener" "mousemove" on-mouse-move)
+  (ocall js/window "addEventListener" "contextmenu" on-context-menu))
 
 (defn cleanup! []
   (ocall js/window "removeEventListener" "mousedown" on-mouse-down)
   (ocall js/window "removeEventListener" "mouseup" on-mouse-up)
-  (ocall js/window "removeEventListener" "mousemove" on-mouse-move))
+  (ocall js/window "removeEventListener" "mousemove" on-mouse-move)
+  (ocall js/window "removeEventListener" "contextmenu" on-context-menu))

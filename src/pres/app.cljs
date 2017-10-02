@@ -6,6 +6,7 @@
     [pres.editors.noko :as noko]
     [pres.editors.zmacs :as zmacs]
     [pres.editors.lispedit :as lispedit]
+    [pres.editors.dedit :as dedit]
     [pres.state :refer [state]]
     [oops.core :refer [ocall oget oset!]]))
 
@@ -17,14 +18,15 @@
   {:bbn {:init bbn/init! :cleanup bbn/cleanup! :draw bbn/draw}
    :noko {:init noko/init! :cleanup noko/cleanup! :draw noko/draw}
    :zmacs {:init zmacs/init! :cleanup zmacs/cleanup! :draw zmacs/draw}
-   :lispedit {:init lispedit/init! :cleanup lispedit/cleanup! :draw lispedit/draw}})
+   :lispedit {:init lispedit/init! :cleanup lispedit/cleanup! :draw lispedit/draw}
+   :dedit {:init dedit/init! :cleanup dedit/cleanup! :draw dedit/draw}})
 
 (defn run-slide
   ([func-name] (run-slide func-name (:slide @state)))
   ([func-name slide-name] ((get-in slides [slide-name func-name]))))
 
 (def slide-order
-  [:bbn :noko :zmacs :lispedit])
+  [:bbn :noko :zmacs :lispedit :dedit])
 
 (defn slide-index [name]
   (first (keep-indexed #(when (= name %2) %1) slide-order)))
