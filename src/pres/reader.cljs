@@ -108,6 +108,10 @@
   (when (and a b (= (first a) (first b)))
     (cons (first a) (common-ancestor (next a) (next b)))))
 
+(defn parent [a]
+  (when-let [p (seq (butlast a))]
+    (vec p)))
+
 (defn descendant? [a b]
   (and a b (= b (take (count b) a))))
 

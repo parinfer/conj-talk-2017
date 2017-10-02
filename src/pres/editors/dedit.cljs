@@ -4,7 +4,7 @@
     [pres.camera :refer [mouse->cam] :as camera]
     [pres.state :refer [state]]
     [pres.codebox :as codebox]
-    [pres.reader :refer [print-node path-diff descendant? walk node-from-path]]
+    [pres.reader :refer [descendant? parent common-ancestor]]
     [pres.pprint :refer [pprint]]
     [pres.examples :as examples]
     [clojure.string :as string]
@@ -95,42 +95,42 @@
 ;; Mouse
 ;;----------------------------------------------------------------------
 
+(defn set-top [curr]
+  (let [prev (get-state :top)]
+    (set-state!
+      (-> (get-state)
+          (assoc :top curr :nxt prev)))))
+
+(defn click [{:keys [id path button]}]
+  (let [top (get-state :top)
+        path (case button
+               :left path
+               :middle (parent path)
+               :right (when (= id (:id top))
+                        (common-ancestor path (:path top))))]
+    (set-top {:id id :path path})))
+
+(defn pick-node [box [x y]]
+  (->> (codebox/pick-nodes box [x y])
+       (sort-by #(count (:path %)))
+       (last)))
+
+(defn click-info [e]
+  (let [[x y] (mouse->cam e)
+        pick (fn [[id box]]
+               {:id id
+                :path (:path (pick-node box [x y]))})]
+    (when-let [node (first (filter :path (pick boxes)))]
+      (assoc node :button
+        ([:left :middle :right] (oget ctx "button"))))))
+
 (defn on-mouse-down [e]
-  (let [{:keys [top nxt]} (get-state)
-        hover (codebox/lookup box-full path-hover)]
-    (when hover
-      (set-state!
-        (-> (get-state)
-            (assoc :path-curr path-hover)
-            (dissoc :path-hover)
-            (assoc :mousedown true))))))
+  (click (click-info e)))
 
 (defn on-mouse-up [e]
   (set-state! (assoc (get-state) :mousedown false)))
 
-(defn pick-node [code [x y]]
-  (->> (codebox/pick-nodes code [x y])
-       (filter #(or (:paren %)
-                    (= (:text %) "&")
-                    (= (:text %) "...")))
-       (sort-by #(count (:path %)))
-       (last)))
-
-(defn on-mouse-move [e]
-  (let [[x y] (mouse->cam e)
-        {:keys [mousedown path-hover path-curr]} (get-state)
-        new-path-hover (or (:path (pick-node box-full [x y]))
-                           (when-let [node (pick-node box-curr [x y])]
-                             (let [pnode (node-from-path top-pprint (next (:path node)))]
-                               (or (:path pnode)
-                                   (first (:elided-paths pnode))))))]
-    (when-not (= new-path-hover path-hover)
-      (when mousedown
-        (set-box-curr! new-path-hover))
-      (set-state!
-        (-> (get-state)
-            (assoc :path-hover new-path-hover
-                   :path-curr (if mousedown new-path-hover path-curr)))))))
+(defn on-mouse-move [e])
 
 ;;----------------------------------------------------------------------
 ;; Load
