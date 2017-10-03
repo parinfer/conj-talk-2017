@@ -20,9 +20,12 @@
    :path (conj (public-path path) i)})
 
 (defn atom-node [text xy path i]
-  {:xy xy
-   :text text
-   :path (conj (public-path path) i)})
+  (let [[x y] xy
+        x1 (+ x (count text) -1)]
+    {:xy xy
+     :xy-end [x1 y]
+     :text text
+     :path (conj (public-path path) i)}))
 
 (defn skip-space [{:keys [xy text] :as state}]
   (let [[x y] xy

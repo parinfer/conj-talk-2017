@@ -85,41 +85,58 @@
 ;; Node helpers
 ;;----------------------------------------------------------------------
 
+(defn multiline-range? [xy xy-end]
+  (let [[_ y] xy
+        [_ y1] xy-end]
+    (not= y y1)))
+
 (defn multiline-node? [{:keys [xy xy-end] :as node}]
-  (if (and xy xy-end)
-    (let [[_ y] xy
-          [_ y1] xy-end]
-      (not= y y1))))
+  (multiline-range? xy xy-end))
 
 ;;----------------------------------------------------------------------
 ;; Node box coordinates
 ;;----------------------------------------------------------------------
 
-; x,y -> +-----------+
-;        |(foo       |
-;        |  (+ 1 2 3)|
-;        |      +----+ <- x2,y2
-;        |  bar)|
-;        +------+ <- x1,y1
-(defn node->multiline-box [g {:keys [xy xy-end] :as node}]
+; Case 1
+;   x,y -> +------------+
+;          |(foo baz    |
+;          |            |
+;          |  (f 1 2 3) |
+;          |      +-----+ <- x2,y2
+;          |  bar)|
+;          +------+ <- x1,y1
+
+; Case 2
+;         x,y -> +------+
+;           (foo | baz  |
+; x3,y3 -> +-----+      |
+;          |  (f 1 2 3) |
+;          |      +-----+ <- x2,y2
+;          |  bar |)
+;          +------+ <- x1,y1
+
+(defn multiline-box-shape [g xy xy-end]
   (let [[x y] xy
         [x1 y1] (map inc xy-end)
         w (- x1 x)
         h (- y1 y)
         y2 (dec y1)
-        x2 (apply max x1 (map count (subvec (:lines g) y y2)))]
+        x2 (apply max x1 (map count (subvec (:lines g) y y2)))
+        y3 (inc y)
+        x3 (apply min x (map #(count (re-find #"^\s*" %)) (subvec (:lines g) (inc y) y2)))]
     (if (= x1 x2)
       [:rect x y w h]
-      [:crect x y x1 y1 x2 y2])))
+      [:crect x y x1 y1 x2 y2 x3 y3])))
 
-(defn node->box-shape [g {:keys [text xy xy-end paren] :as node}]
-  (if (multiline-node? node)
-    (node->multiline-box g node)
+(defn box-shape [g xy xy-end]
+  (if (multiline-range? xy xy-end)
+    (multiline-box-shape g xy xy-end)
     (let [[x y] xy
           [x1 _] xy-end]
-      (if paren
-        [:rect x y (- (inc x1) x) 1]
-        [:rect x y (count text) 1]))))
+      [:rect x y (- (inc x1) x) 1])))
+
+(defn node->box-shape [g {:keys [xy xy-end] :as node}]
+  (box-shape g xy xy-end))
 
 (defn inside-node-box? [g xy node]
   (inside-shape? xy (code-shape->cam (node->box-shape g node))))
@@ -128,7 +145,7 @@
 ;; Node underline coordinates
 ;;----------------------------------------------------------------------
 
-(defn node->multiline-underlines [g {:keys [xy xy-end] :as node}]
+(defn multiline-underline-shapes [g xy xy-end]
   (let [[x0 y0] xy
         [x1 y1] xy-end]
     (for [y (range y0 (inc y1))]
@@ -138,16 +155,17 @@
             yb (- (inc y) underline-pad)] ; bottom
         [:line xl yb xr yb]))))
 
-(defn node->underlines [g {:keys [text xy xy-end paren] :as node}]
-  (if (multiline-node? node)
-    (node->multiline-underlines g node)
+(defn underline-shapes [g xy xy-end]
+  (if (multiline-range? xy xy-end)
+    (multiline-underline-shapes g xy xy-end)
     (let [[xl y] xy
-          xr (if paren
-               (inc (first xy-end))
-               (+ xl (count text)))
+          [xr _] xy-end
           yb (- (inc y) underline-pad)]
       [; shape list of size 1
        [:line xl yb xr yb]])))
+
+(defn node->underlines [g {:keys [xy xy-end] :as node}]
+  (underline-shapes g xy xy-end))
 
 (declare char-at)
 
@@ -190,11 +208,14 @@
 (defmethod draw-shape :rect [[_name x y w h]]
   (ocall ctx "beginPath")
   (ocall ctx "rect" x y w h))
-(defmethod draw-shape :crect [[_name x0 y0 x1 y1 x2 y2]]
+(defmethod draw-shape :crect [[_name x0 y0 x1 y1 x2 y2 x3 y3]]
   (ocall ctx "beginPath")
   (ocall ctx "moveTo" x0 y0)
-  (doseq [[x y] [[x2 y0] [x2 y2] [x1 y2] [x1 y1] [x0 y1]]]
-    (ocall ctx "lineTo" x y))
+  (let [pairs (if (= x0 x3)
+                [[x2 y0] [x2 y2] [x1 y2] [x1 y1] [x0 y1]]
+                [[x2 y0] [x2 y2] [x1 y2] [x1 y1] [x3 y1] [x3 y3] [x0 y3]])]
+    (doseq [[x y] pairs]
+      (ocall ctx "lineTo" x y)))
   (ocall ctx "closePath"))
 (defmethod draw-shape :line [[_name x0 y0 x1 y1]]
   (ocall ctx "beginPath")
