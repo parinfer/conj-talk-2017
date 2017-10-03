@@ -73,6 +73,7 @@
                 2 0)]
     (oset! ctx "fillStyle" "#333")
     (codebox/draw box)
+    (oset! ctx "lineWidth" 1.5)
     (oset! ctx "strokeStyle" "#000")
     (when top-node
       (codebox/draw-underline box top-node))
