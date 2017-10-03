@@ -160,6 +160,7 @@
     (multiline-underline-shapes g xy xy-end)
     (let [[xl y] xy
           [xr _] xy-end
+          xr (inc xr)
           yb (- (inc y) underline-pad)]
       [; shape list of size 1
        [:line xl yb xr yb]])))
