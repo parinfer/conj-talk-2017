@@ -66,31 +66,22 @@
   (let [box (boxes id)
         {:keys [top nxt]} (get-state)
         top-node (when (= (:id top) id) (codebox/lookup box (:path top)))
-        nxt-node (when (= (:id nxt) id) (codebox/lookup box (:path nxt)))]
+        nxt-node (when (= (:id nxt) id) (codebox/lookup box (:path nxt)))
+        nxt-y (if (and top-node nxt-node
+                       (or (descendant? (:path top) (:path nxt))
+                           (descendant? (:path nxt) (:path top))))
+                2 0)]
     (oset! ctx "fillStyle" "#333")
     (codebox/draw box)
+    (oset! ctx "strokeStyle" "#000")
     (when top-node
-      (oset! ctx "strokeStyle" "#000")
       (codebox/draw-underline box top-node))
     (when nxt-node
       (ocall ctx "save")
-      ; (ocall ctx "translate" 0 -0.5)
+      (ocall ctx "translate" 0 nxt-y)
       (ocall ctx "setLineDash" #js[3 1])
       (oset! ctx "strokeStyle" "#000")
       (codebox/draw-underline box nxt-node)
-      (when (and top-node nxt-node)
-        (cond
-          (descendant? (:path top) (:path nxt))
-          (do
-            (ocall ctx "setLineDash" #js[])
-            (codebox/draw-underline box top-node))
-
-          (descendant? (:path nxt) (:path top))
-          (do
-            (oset! ctx "strokeStyle" "#fff")
-            (codebox/draw-underline box nxt-node))
-
-          :else nil))
       (ocall ctx "restore"))))
 
 ;;----------------------------------------------------------------------
