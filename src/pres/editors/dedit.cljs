@@ -74,14 +74,14 @@
     (oset! ctx "fillStyle" "#333")
     (codebox/draw box)
     (oset! ctx "lineWidth" 1.5)
-    (oset! ctx "strokeStyle" "#000")
     (when top-node
+      (oset! ctx "strokeStyle" "#333")
       (codebox/draw-underline box top-node))
     (when nxt-node
       (ocall ctx "save")
       (ocall ctx "translate" 0 nxt-y)
       (ocall ctx "setLineDash" #js[3 1])
-      (oset! ctx "strokeStyle" "#000")
+      (oset! ctx "strokeStyle" "#888")
       (codebox/draw-underline box nxt-node)
       (ocall ctx "restore"))))
 
