@@ -115,7 +115,7 @@
       (set-top {:id id :path path}))))
 
 (defn pick-node [box [x y]]
-  (->> (codebox/pick-nodes box [x y])
+  (->> (codebox/pick-nodes box [x y] :text)
        (sort-by #(count (:path %)))
        (last)))
 
