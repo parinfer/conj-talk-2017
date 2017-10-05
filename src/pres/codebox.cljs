@@ -62,6 +62,10 @@
     [(- mx gx)
      (- my gy)]))
 
+(defn cam->code-frac [[x y]]
+  [(/ x char-w)
+   (/ y line-h)])
+
 (defn cam->code [[x y]]
   [(Math/floor (/ x char-w))
    (Math/floor (/ y line-h))])
@@ -295,6 +299,30 @@
 (defn lookup [g path]
   (when path
     (node-from-path (:tree g) (next path)))) ; ignore first key since we assume top-node))
+
+(defn pick-space [g [mx my]]
+  (setup-font g)
+  (let [[x y] (rel-cam g [mx my])]
+    (when (inside-node-box? g [x y] (:tree g))
+      (let [[cx cy] (char-coord-at g [x y])
+            char (char-at g [cx cy])]
+        (when (or (nil? char) (= " " char))
+          (let [right (->> (:nodes g)
+                           (filter #(let [[x y] (:xy %)] (and (= y cy) (> x cx))))
+                           (sort-by #(let [[x y] (:xy %)] x))
+                           (first))
+                left (->> (:nodes g)
+                          (filter #(let [[x y] (:xy-end %)] (and (= y cy) (< x cx))))
+                          (sort-by #(let [[x y] (:xy-end %)] x))
+                          (last))
+                dir (if right -1 1)
+                path (:path (or right left))
+                path-i (dec (count path))
+                i (path path-i)
+                path (update path path-i + (* dir 0.5))]
+            {:path path
+             :space? true}))))))
+             ; TODO: xy and xy-end
 
 (defn make
   [string {:keys [xy font-size]}]
