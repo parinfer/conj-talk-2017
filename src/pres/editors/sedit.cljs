@@ -46,8 +46,12 @@
   (swap! state assoc state-key s))
 
 ;;----------------------------------------------------------------------
-;; Selection utilities
+;; Selection normalizing
 ;;----------------------------------------------------------------------
+
+(defn space-path? [path]
+  (let [i (last path)]
+    (not= i (Math/floor i))))
 
 (defn char-path? [path]
   (when-let [parent (codebox/lookup box (parent path))]
@@ -63,7 +67,8 @@
 ; precondition: head and anchor are sorted
 (defn selection->node [[a b]]
   (if-not b
-    (select-keys (codebox/lookup box a) [:xy :xy-end])
+    (when-not (space-path? a)
+      (select-keys (codebox/lookup box a) [:xy :xy-end]))
     (if (char-path? a)
       {:xy (char-path->xy a)
        :xy-end (char-path->xy b)
@@ -72,17 +77,23 @@
        :xy-end (:xy-end (codebox/lookup box b))
        :range? true})))
 
-(defn normalize-selection* [paths]
+(defn level-paths [paths]
   (let [n (count (apply common-ancestor (take 2 paths)))]
     (->> paths
          (map #(take (inc n) %))
          (sort-by last))))
 
 (defn normalize-selection [[a b & others]]
-  (reduce
-    #(normalize-selection* (cons %2 %1))
-    (normalize-selection* [a b])
-    others))
+  (let [paths (reduce
+                #(level-paths (cons %2 %1))
+                (level-paths [a b])
+                others)]
+    (if (< (count paths) 2)
+      paths
+      (let [[a b] [(first paths) (last paths)]
+            a (update a (dec (count a)) Math/ceil)
+            b (update b (dec (count a)) Math/floor)]
+        [a b]))))
 
 ;;----------------------------------------------------------------------
 ;; Draw Editor
@@ -99,12 +110,14 @@
         ; draw range (in box if primary, underline if copy)
         ()))))
 
+(defn draw-cursor [])
+
 (defn draw-editor [box]
   (oset! ctx "fillStyle" "#333")
   (codebox/draw box)
   (draw-selection :primary)
-  (draw-selection :copy))
-  ;(draw-cursor))
+  (draw-selection :copy)
+  (draw-cursor))
 
 ;;----------------------------------------------------------------------
 ;; Draw all
@@ -114,8 +127,17 @@
   (draw-editor box))
 
 ;;----------------------------------------------------------------------
-;; Mouse
+;; Picker
 ;;----------------------------------------------------------------------
+
+; NOTE: a cursor is just a path
+; inside text: path to text + char index (cursor to left of index)
+; inside list: path to list + fractional index (same as space path)
+
+; NOTE: a selection is 1 or 2 paths
+; edit selection: text path + char index
+; structure selection: list path
+; space selection: normal path +/- 0.5
 
 (defn pick-node [box [x y]]
   (or (->> (codebox/pick-nodes box [x y] :text)
@@ -134,21 +156,22 @@
   (let [char-xy (codebox/char-coord-at box [x y])
         cursor-xy (codebox/cursor-coord-at box [x y])
         path (:path node)]
-    (when (:paren node)
-      (let [opener? (= (:xy node) char-xy)
-            cursor-left? (= char-xy cursor-xy)
-            first-inner (conj path -0.5)
-            last-inner (conj path (+ (count (:children node)) -0.5))
-            next-outer (update path (dec (count path)) + 0.5)]
-        {:path (cond opener? first-inner, cursor-left? last-inner, :else next-outer)
-         :space? true}))))
+    (let [opener? (= (:xy node) char-xy)
+          cursor-left? (= char-xy cursor-xy)
+          first-inner (conj path -0.5)
+          last-inner (conj path (+ (count (:children node)) -0.5))
+          next-outer (update path (dec (count path)) + 0.5)]
+      {:path (cond opener? first-inner, cursor-left? last-inner, :else next-outer)
+       :space? true})))
 
 (defn bordering-paths [space-path]
   [(update path (dec (count path)) - 0.5)
    (update path (dec (count path)) + 0.5)])
 
-(defn region-side [[x0 y0] [x1 y1] [mx my]]
-  (let [x1 (inc x1)
+(defn region-side [xy xy-end [mx my]]
+  (let [[x0 y0] xy
+        [x1 y1] xy-end
+        x1 (inc x1)
         [x y] (codebox/cam->code-frac box (codebox/rel-cam box [mx my]))
         y (Math/floor y)]
     (when-not (= [x0 y0] [x1 y1])
@@ -156,22 +179,29 @@
         ([:left :right] (Math/round (/ (- x x0) (- x1 x0))))
         ({y0 :left y1 :right} y)))))
 
-(defn structure-cursor [node [x y]]
+(defn structure-cursor
+  [{:keys [path] :as node} [x y]]
   (cond
-    (:space? node)
-    (:path node)
+    (:space? node) path
 
     (:text node)
-    nil ; TODO: update path +/- 0.5
+    (let [side (region-side (:xy node) (:xy-end node) [x y])
+          dx ({:left -0.5 :right 0.5} side)]
+      (update path (dec (count path)) + dx))
 
     (:paren node)
-    nil))
-    ; TODO: if left of open paren, or right of close paren => update path +/- 0.5
-    ; TODO: if right of open paren, or left of close-paren => conj path -0.5 or (+ (count (:children node)) -0.5)
-
-; NOTE: a cursor is just a path
-; inside text: text path + char index
-; inside list: list path + fractional index (same as space path)
+    (let [char-xy (codebox/char-coord-at box [x y])
+          cursor-xy (codebox/cursor-coord-at box [x y])
+          left? (= char-xy cursor-xy)
+          right? (not left?)
+          open? (= (:xy node) char-xy)
+          close? (not at-open?)]
+      (cond
+        (and left? open?) (update path (dec (count path)) - 0.5)
+        (and right? close?) (update path (dec (count path)) + 0.5)
+        (and right? open?) (conj path -0.5)
+        (and left? close?) (conj path (- (count (:children node)) 0.5))
+        :else nil))))
 
 (defn force-structure-cursor? [space left right [x y]]
   ; ( | (    => structure
@@ -219,8 +249,12 @@
 
 (defn pick-edit [box [x y]]
   (when-let [node (pick-node box [x y])]
-    (let [node (or (push-to-space node box [x y]) node)
-          ; TODO: if (:text node), set node to char-node
+    (let [node (cond
+                 (:paren node) (push-to-space node box [x y]) node
+                 (:text node)
+                 (let [[cx cy] (codebox/char-coord-at box [x y])]
+                   {:path (conj (:path node) (- cx (first (:xy node))))
+                    :char? true}))
           cursor (edit-cursor node [x y])]
       {:node node
        :cursor cursor})))
@@ -230,8 +264,17 @@
     {:node node
      :cursor (structure-cursor node [x y])}))
 
+;;----------------------------------------------------------------------
+;; Mouse
+;;----------------------------------------------------------------------
+
 (defn mouse-down [[x y] button]
-  (let [(pick-node box [x y])]))
+  (let [{:keys [cursor node]}
+        (case button
+          :left (pick-edit box [x y])
+          :right (pick-edit box [x y])
+          :middle (pick-structure box [x y]))]
+    nil))
 
 (defn click-info [e]
   {:xy (mouse->cam e)
