@@ -36,7 +36,7 @@
    :selections {} ; one or two paths
    :cursor nil
    :pending-selection nil ; one path
-   :mode nil ; primary, copy
+   :mode :primary ; primary, copy
    :mousedown nil}) ; left, right, middle
 
 (defn get-state
@@ -281,8 +281,8 @@
 (defn edit-cursor [node [x y]]
   (let [[cx cy] (codebox/cursor-coord-at box [x y])]
     (cond
-      (:text node)
-      (conj (:path node) (- cx (first (:xy node))))
+      (:char? node)
+      (:path node)
 
       (:space? node)
       (if (force-structure-cursor? node [x y])
@@ -323,6 +323,8 @@
                                 :middle (pick-structure box [x y])
                                 nil)
         mode (get-state :mode)]
+    (println "cursor:" (pr-str cursor))
+    (println "node:" (pr-str node))
     (cond
       (#{:left :middle} button)
       (set-state!
@@ -331,7 +333,7 @@
           (= mode :primary) (assoc :cursor cursor)))
 
       (= :right button)
-      (when (seq (get-state :selections))
+      (when (seq (get-in (get-state) [:selections mode]))
         (set-state!
           (-> (get-state)
               (assoc :pending-selection node
