@@ -149,12 +149,12 @@
         (nil? right) (:xy-end parent-node)))))
 
 (defn draw-cursor []
-  (let [{:keys [cursor mousedown]} (get-state)]
+  (let [{:keys [cursor mousedown mode]} (get-state)]
     (when cursor
       (oset! ctx "strokeStyle" "#333")
       (oset! ctx "fillStyle" "#333")
       (let [[x y] (cursor->char-xy cursor)]
-        (if mousedown
+        (if (and (= mode :primary) mousedown)
           (do
             (codebox/draw-cursor box [x y])
             (ocall ctx "stroke"))
@@ -349,16 +349,18 @@
 
       (= :right button)
       (when-let [sel (seq (get-in (get-state) [:selections mode]))]
-        (if (space-path? (first sel))
-          (set-state!
-            (-> (get-state)
-                (assoc :pending-selection nil
-                       :cursor nil)))
-          (set-state!
-            (-> (get-state)
-                (assoc :pending-selection (:path node)
-                       :cursor nil
-                       :mousedown button))))))))
+        (let [cursor (when (= mode :copy)
+                       (get-state :cursor))]
+          (if (space-path? (first sel))
+            (set-state!
+              (-> (get-state)
+                  (assoc :pending-selection nil
+                         :cursor cursor)))
+            (set-state!
+              (-> (get-state)
+                  (assoc :pending-selection (:path node)
+                         :cursor cursor ; TODO: do not do this if copy mode
+                         :mousedown button)))))))))
 
 (defn click-info [e]
   {:xy (mouse->cam e)
