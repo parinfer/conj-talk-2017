@@ -362,11 +362,12 @@
       (mouse-down xy button))))
 
 (defn on-mouse-up [e]
-  (let [sel (normalized-selection (get-state :mode))]
+  (let [mode (get-state :mode)
+        sel (normalized-selection mode)]
     (set-state!
       (-> (get-state)
+          (assoc-in [:selections mode] [sel])
           (assoc :mousedown nil
-                 :selections sel
                  :pending-selection nil)))))
 
 (defn on-key-down [e]
