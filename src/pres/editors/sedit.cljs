@@ -379,6 +379,7 @@
     (set-state!
       (-> (get-state)
           (assoc-in [:selections mode] sel)
+
           (assoc :mousedown nil
                  :pending-selection nil)))))
 
@@ -388,7 +389,15 @@
 
 (defn on-key-up [e]
   (when (= "Shift" (oget e "key"))
-    (set-state! (assoc (get-state) :mode :primary))))
+    (set-state!
+      (-> (get-state)
+          (assoc :mode :primary)
+
+          ; We clear the copy selection since it is supposed to be used to insert at
+          ; text at the cursor or replace text at primary selection range.
+          ; No operations are performed yet, so we discard as it would be after such
+          ; an operation.
+          (assoc-in [:selections :copy] nil)))))
 
 (defn on-context-menu [e]
   (ocall e "preventDefault"))
