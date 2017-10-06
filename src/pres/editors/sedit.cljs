@@ -279,11 +279,13 @@
         (and lc? ra?) (= :left side)
         (and lc? rc?))))
 
-(defn edit-cursor [node [x y]]
+(defn edit-cursor [{:keys [path] :as node} [x y]]
   (let [[cx cy] (codebox/cursor-coord-at box [x y])]
     (cond
       (:char? node)
-      (:path node)
+      (if (= [cx cy] (codebox/char-coord-at box [x y]))
+        path
+        (update path (dec (count path)) inc))
 
       (:space? node)
       (if (force-structure-cursor? node [x y])
