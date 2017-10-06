@@ -55,12 +55,12 @@
     (not= i (Math/floor i))))
 
 (defn char-path? [path]
-  (when-let [parent (codebox/lookup box (parent path))]
-    (:text parent)))
+  (when-let [node (codebox/lookup box (parent path))]
+    (:text node)))
 
 (defn char-path->xy [path]
-  (when-let [parent (codebox/lookup box (parent path))]
-    (let [[x y] (:xy parent)
+  (when-let [node (codebox/lookup box (parent path))]
+    (let [[x y] (:xy node)
           x1 (+ x (last path))]
       [x1 y])))
 
@@ -130,8 +130,18 @@
 
 (defn cursor->char-xy [path]
   (cond
-    (char-path? path) nil ; TODO
-    (space-path? path) nil ; TODO
+    (char-path? path)
+    (let [[x y] (:xy (codebox/lookup box (parent path)))]
+      [(+ x (last path)) y])
+
+    (space-path? path) nil
+    (let [[left right] (map #(codebox/lookup box %) (bordering-paths path))
+          parent-node (codebox/lookup box (parent path))]
+      (cond
+        (and left right) (codebox/add-x (:xy-end left) 1.5)
+        (nil? left) (codebox/add-x (:xy parent-node) 1)
+        (nil? right) (:xy-end parent-node)))
+
     :else nil))
 
 (defn draw-cursor []

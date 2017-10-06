@@ -311,8 +311,7 @@
   (when path
     (node-from-path (:tree g) (next path)))) ; ignore first key since we assume top-node))
 
-(defn right-of [[x y]] [(inc x) y])
-(defn left-of [[x y]] [(dec x) y])
+(defn add-x [[x y] dx] [(+ x dx) y])
 
 (defn pick-space [g [mx my]]
   (setup-font g)
@@ -340,10 +339,10 @@
                 path (update path level + (* dir 0.5))
 
                 xy (if left
-                     (right-of (:xy-end left))
-                     (right-of (:xy parent)))
+                     (add-x (:xy-end left) 1)
+                     (add-x (:xy parent) 1))
                 xy-end (if right
-                         (left-of (:xy right))
+                         (add-x (:xy right) -1)
                          (:xy-end parent))]
             {:path path
              :space? true
