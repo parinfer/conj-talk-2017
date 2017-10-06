@@ -313,6 +313,22 @@
 
 (defn add-x [[x y] dx] [(+ x dx) y])
 
+(defn space-node [g path]
+  (let [level (dec (count path))
+        parent (lookup g (butlast path))
+        left (lookup g (update path level Math/floor))
+        right (lookup g (update path level Math/ceil))
+        xy (if left
+             (add-x (:xy-end left) 1)
+             (add-x (:xy parent) 1))
+        xy-end (if right
+                 (add-x (:xy right) -1)
+                 (add-x (:xy-end parent) -1))]
+    {:path path
+     :space? true
+     :xy xy
+     :xy-end xy-end}))
+
 (defn pick-space [g [mx my]]
   (setup-font g)
   (when (inside-node-box? g (rel-cam g [mx my]) (:tree g))
@@ -327,26 +343,12 @@
                         (filter #(let [[x y] (:xy-end %)] (and (= y cy) (< x cx))))
                         (sort-by #(let [[x y] (:xy-end %)] x))
                         (last))
-              dir (if right -1 1)
               path (:path (or right left))
               level (dec (count path))
-
-              parent (lookup g (butlast path))
-              right (or right (lookup g (update path level inc)))
-              left (or left (lookup g (update path level dec)))
-
-              path (update path level + (* dir 0.5))
-
-              xy (if left
-                   (add-x (:xy-end left) 1)
-                   (add-x (:xy parent) 1))
-              xy-end (if right
-                       (add-x (:xy right) -1)
-                       (:xy-end parent))]
-          {:path path
-           :space? true
-           :xy xy
-           :xy-end xy-end})))))
+              path (if right
+                     (update path level - 0.5)
+                     (update path level + 0.5))]
+          (space-node g path))))))
 
 (defn make
   [string {:keys [xy font-size]}]

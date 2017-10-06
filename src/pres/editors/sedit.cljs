@@ -207,14 +207,15 @@
 (defn push-to-space [node box [x y]]
   (let [char-xy (codebox/char-coord-at box [x y])
         cursor-xy (codebox/cursor-coord-at box [x y])
-        path (:path node)]
-    (let [opener? (= (:xy node) char-xy)
-          cursor-left? (= char-xy cursor-xy)
-          first-inner (conj path -0.5)
-          last-inner (conj path (+ (count (:children node)) -0.5))
-          next-outer (update path (dec (count path)) + 0.5)]
-      {:path (cond opener? first-inner, cursor-left? last-inner, :else next-outer)
-       :space? true})))
+        opener? (= (:xy node) char-xy)
+        cursor-left? (= char-xy cursor-xy)
+        path (:path node)
+        path
+        (cond
+          opener? (conj path -0.5)
+          cursor-left? (conj path (- (count (:children node)) 0.5))
+          :else (update path (dec (count path)) + 0.5))]
+    (codebox/space-node box path)))
 
 (defn paths-around-space [path]
   [(update path (dec (count path)) - 0.5)
