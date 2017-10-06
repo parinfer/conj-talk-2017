@@ -274,6 +274,17 @@
     (ocall ctx "stroke"))
   (restore))
 
+(defn draw-cursor-arrow [g [cx cy]]
+  (setup-draw g)
+  (ocall ctx "beginPath")
+  (let [[x y] (code->cam [cx cy])
+        s (/ char-w 2)]
+    (ocall ctx "translate" x (+ y line-h s))
+    (ocall ctx "moveTo" (- s) 0)
+    (ocall ctx "lineTo" 0 (* s -2))
+    (ocall ctx "lineTo" s 0))
+  (restore))
+
 (defn pick-nodes
   ([g [mx my]] (pick-nodes g [mx my] :box))
   ([g [mx my] shape]

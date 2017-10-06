@@ -128,12 +128,27 @@
           (ocall ctx "stroke")
           (codebox/draw-underline box sel))))))
 
+(defn cursor->char-xy [path]
+  (cond
+    (char-path? path) nil ; TODO
+    (space-path? path) nil ; TODO
+    :else nil))
+
 (defn draw-cursor []
   (let [{:keys [cursor mousedown]} (get-state)]
     (when cursor
-      (if mousedown
-        nil ; TODO draw cursor pipe
-        nil)))) ; TODO: draw cursor arrow
+      (oset! ctx "strokeStyle" "#333")
+      (oset! ctx "fillStyle" "#333")
+      (let [[x y] (cursor->char-xy path)]
+        (if mousedown
+          (do
+            (codebox/draw-cursor box [x y])
+            (ocall ctx "stroke"))
+          (do
+            ; TODO: blink
+            (codebox/draw-cursor-arrow box [x y])
+            (ocall ctx "stroke")
+            (ocall ctx "fill")))))))
 
 (defn draw-editor [box]
   (oset! ctx "fillStyle" "#333")
