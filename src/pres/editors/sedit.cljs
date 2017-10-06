@@ -124,8 +124,9 @@
       (do
         (oset! ctx "strokeStyle" "#333")
         (if (:range? sel)
-          (codebox/draw-bounding-box box sel)
-          (ocall ctx "stroke")
+          (do
+            (codebox/draw-bounding-box box sel)
+            (ocall ctx "stroke"))
           (codebox/draw-underline box sel))))))
 
 (defn cursor->char-xy [path]
@@ -146,7 +147,7 @@
     (when cursor
       (oset! ctx "strokeStyle" "#333")
       (oset! ctx "fillStyle" "#333")
-      (let [[x y] (cursor->char-xy path)]
+      (let [[x y] (cursor->char-xy cursor)]
         (if mousedown
           (do
             (codebox/draw-cursor box [x y])
@@ -217,7 +218,7 @@
   (let [[x0 y0] xy
         [x1 y1] xy-end
         x1 (inc x1)
-        [x y] (codebox/cam->code-frac box (codebox/rel-cam box [mx my]))
+        [x y] (codebox/cam->code-frac (codebox/rel-cam box [mx my]))
         y (Math/floor y)]
     (when-not (= [x0 y0] [x1 y1])
       (if (= y0 y1)
@@ -241,7 +242,7 @@
           left? (= char-xy cursor-xy)
           right? (not left?)
           open? (= (:xy node) char-xy)
-          close? (not at-open?)]
+          close? (not open?)]
       (cond
         (and left? open?) (update path (dec (count path)) - 0.5)
         (and right? close?) (update path (dec (count path)) + 0.5)
@@ -268,7 +269,7 @@
         ro? (:paren right) ; right open (
         ra? (:text right) ; right atom
         la? (:text left) ; left atom
-        side (region-side (:xy space-node) (:xy-end space-node) xy)]
+        side (region-side (:xy space-node) (:xy-end space-node) [x y])]
     (or (and lo? ro?)
         (and lo? rc?)
         (and la? ro? (= :right side))
@@ -297,7 +298,7 @@
 (defn pick-edit [box [x y]]
   (when-let [node (pick-node box [x y])]
     (let [node (cond
-                 (:paren node) (push-to-space node box [x y]) node
+                 (:paren node) (push-to-space node box [x y])
                  (:text node)
                  (let [[cx cy] (codebox/char-coord-at box [x y])]
                    {:path (conj (:path node) (- cx (first (:xy node))))
