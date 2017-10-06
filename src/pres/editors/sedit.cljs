@@ -110,7 +110,7 @@
 
 (defn draw-selection [mode]
   (when-let [sel (normalized-selection mode)]
-    (let [node (selection->node sel)]
+    (when-let [node (selection->node sel)]
       (case mode
         :copy
         (do
@@ -366,7 +366,7 @@
         sel (normalized-selection mode)]
     (set-state!
       (-> (get-state)
-          (assoc-in [:selections mode] [sel])
+          (assoc-in [:selections mode] sel)
           (assoc :mousedown nil
                  :pending-selection nil)))))
 
