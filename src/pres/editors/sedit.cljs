@@ -7,8 +7,7 @@
     [pres.reader :refer [descendant? parent common-ancestor]]
     [pres.examples :as examples]
     [clojure.string :as string]
-    [oops.core :refer [ocall oget oset!]]
-    [clojure.pprint :refer [pprint]]))
+    [oops.core :refer [ocall oget oset!]]))
 
 ; might be first structure editor with a story for inline editing
 ; new mouse language w/ interesting cursor states
@@ -177,7 +176,6 @@
 ;;----------------------------------------------------------------------
 
 (defn draw []
-  (pprint (get-state))
   (draw-editor box))
 
 ;;----------------------------------------------------------------------
@@ -336,8 +334,6 @@
                                 :middle (pick-structure box [x y])
                                 nil)
         mode (get-state :mode)]
-    (println "cursor:" (pr-str cursor))
-    (println "node:" (pr-str node))
     (cond
       (#{:left :middle} button)
       (set-state!
