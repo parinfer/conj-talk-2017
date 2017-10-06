@@ -110,11 +110,23 @@
 
 (defn draw-selection [mode]
   (when-let [sel (normalized-selection mode)]
-    (if (= mode :copy)
-      nil ; TODO: draw zigzag underline
-      (if (:range? sel)
-        (codebox/draw-bounding-box box sel)
-        (codebox/draw-underline box sel)))))
+    (case mode
+      :copy
+      (do
+        (ocall ctx "save")
+        (ocall ctx "translate" 0 2)
+        (ocall ctx "setLineDash" #js[3 1])
+        (oset! ctx "strokeStyle" "#888")
+        (codebox/draw-underline box sel)
+        (ocall ctx "restore"))
+
+      :primary
+      (do
+        (oset! ctx "strokeStyle" "#333")
+        (if (:range? sel)
+          (codebox/draw-bounding-box box sel)
+          (ocall ctx "stroke")
+          (codebox/draw-underline box sel))))))
 
 (defn draw-cursor []
   (let [{:keys [cursor mousedown]} (get-state)]
