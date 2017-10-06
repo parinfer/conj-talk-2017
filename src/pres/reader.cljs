@@ -97,11 +97,12 @@
 ;;----------------------------------------------------------------------
 
 (defn node-from-path [src path]
-  (if (seq path)
-    (node-from-path
-      (nth (:children src) (first path))
-      (next path))
-    src))
+  (when src
+    (if (seq path)
+      (node-from-path
+        (get (:children src) (first path))
+        (next path))
+      src)))
 
 ;;----------------------------------------------------------------------
 ;; Paths
