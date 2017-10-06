@@ -19,11 +19,11 @@
 ;; Codeboxes
 ;;----------------------------------------------------------------------
 
-(def font-size 12)
+(def font-size 20)
 
 (def box
    (codebox/make examples/medium-func
-     {:xy [640 50] :font-size font-size}))
+     {:xy [300 100] :font-size font-size}))
 
 ;;----------------------------------------------------------------------
 ;; State
