@@ -232,9 +232,10 @@
     (update path (dec (count path)) Math/ceil)
 
     (:text node)
-    (let [side (region-side (:xy node) (:xy-end node) [x y])
-          dx ({:left -0.5 :right 0.5} side)]
-      (update path (dec (count path)) + dx))
+    (let [side (region-side (:xy node) (:xy-end node) [x y])]
+      (if (= :left side)
+        path
+        (update path (dec (count path)) inc)))
 
     (:paren node)
     (let [char-xy (codebox/char-coord-at box [x y])
@@ -244,10 +245,10 @@
           open? (= (:xy node) char-xy)
           close? (not open?)]
       (cond
-        (and left? open?) (update path (dec (count path)) - 0.5)
-        (and right? close?) (update path (dec (count path)) + 0.5)
-        (and right? open?) (conj path -0.5)
-        (and left? close?) (conj path (- (count (:children node)) 0.5))
+        (and left? open?) path
+        (and right? close?) (update path (dec (count path)) inc)
+        (and right? open?) (conj path 0)
+        (and left? close?) (conj path (count (:children node)))
         :else nil))))
 
 (defn force-structure-cursor? [space-node [x y]]
