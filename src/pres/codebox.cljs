@@ -127,7 +127,7 @@
         y2 (dec y1)
         x2 (apply max x1 (map count (subvec (:lines g) y y2)))
         y3 (inc y)
-        x3 (apply min x (map #(count (re-find #"^\s*" %)) (subvec (:lines g) (inc y) y2)))]
+        x3 (apply min x (map #(count (re-find #"^\s*" %)) (subvec (:lines g) (inc y) y1)))]
     (if (= x1 x2)
       [:rect x y w h]
       [:crect x y x1 y1 x2 y2 x3 y3])))
