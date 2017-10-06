@@ -108,9 +108,11 @@
 ;; Paths
 ;;----------------------------------------------------------------------
 
-(defn common-ancestor [a b]
-  (when (and a b (= (first a) (first b)))
-    (cons (first a) (common-ancestor (next a) (next b)))))
+(defn common-ancestor [& paths]
+  (when (and (every? identity paths)
+             (apply = (map first paths)))
+    (cons (first (first paths))
+      (apply common-ancestor (map next paths)))))
 
 (defn parent [a]
   (when-let [p (seq (butlast a))]
