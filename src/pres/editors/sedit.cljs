@@ -84,7 +84,7 @@
 (defn level-paths [paths]
   (let [n (count (apply common-ancestor (take 2 paths)))]
     (->> paths
-         (map #(take (inc n) %))
+         (map #(vec (take (inc n) %)))
          (sort-by last))))
 
 (defn normalize-selection [[a b & others]]
