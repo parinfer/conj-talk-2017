@@ -276,7 +276,7 @@
         (and la? ro? (= :right side))
         (and lc? ro?)
         (and lc? ro?)
-        (and lc? ra?) (= :left side)
+        (and lc? ra? (= :left side))
         (and lc? rc?))))
 
 (defn edit-cursor [{:keys [path] :as node} [x y]]
@@ -289,11 +289,14 @@
 
       (:space? node)
       (if (force-structure-cursor? node [x y])
-        (structure-cursor node [x y])
+        (do
+          (println "forcing structure cursor")
+          (structure-cursor node [x y]))
         (let [[left right] (map #(codebox/lookup box %) (paths-around-space (:path node)))
               side (if (and (:text left) (:text right))
                      (region-side (:xy node) (:xy-end node) [x y])
                      (if (:text left) :left :right))]
+          (println "edit cursor on space")
           (case side
             :left (conj (:path left) (count (:text node)))
             :right (conj (:path right) 0)))))))
@@ -302,6 +305,7 @@
   (when-let [node (pick-node box [x y])]
     (let [node (cond
                  (:paren node) (push-to-space node box [x y])
+                 (:space? node) node
                  (:text node)
                  (let [[cx cy] (codebox/char-coord-at box [x y])]
                    {:path (conj (:path node) (- cx (first (:xy node))))
