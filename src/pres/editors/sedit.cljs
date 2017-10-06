@@ -348,12 +348,17 @@
           (assoc :cursor cursor)))
 
       (= :right button)
-      (when (seq (get-in (get-state) [:selections mode]))
-        (set-state!
-          (-> (get-state)
-              (assoc :pending-selection (:path node)
-                     :cursor nil
-                     :mousedown button)))))))
+      (when-let [sel (seq (get-in (get-state) [:selections mode]))]
+        (if (space-path? (first sel))
+          (set-state!
+            (-> (get-state)
+                (assoc :pending-selection nil
+                       :cursor nil)))
+          (set-state!
+            (-> (get-state)
+                (assoc :pending-selection (:path node)
+                       :cursor nil
+                       :mousedown button))))))))
 
 (defn click-info [e]
   {:xy (mouse->cam e)
