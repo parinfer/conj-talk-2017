@@ -144,7 +144,7 @@
           left (codebox/lookup box (update path (dec (count path)) dec))
           parent-node (codebox/lookup box (parent path))]
       (cond
-        (and left right) (codebox/add-x (:xy-end left) 1.5)
+        (and left right) (codebox/add-x (:xy-end left) 1.6)
         (nil? left) (codebox/add-x (:xy parent-node) 1)
         (nil? right) (:xy-end parent-node)))))
 
