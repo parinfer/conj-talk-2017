@@ -315,39 +315,38 @@
 
 (defn pick-space [g [mx my]]
   (setup-font g)
-  (let [[x y] (rel-cam g [mx my])]
-    (when (inside-node-box? g [x y] (:tree g))
-      (let [[cx cy] (char-coord-at g [x y])
-            char (char-at g [cx cy])]
-        (when (or (nil? char) (= " " char))
-          (let [right (->> (:nodes g)
-                           (filter #(let [[x y] (:xy %)] (and (= y cy) (> x cx))))
-                           (sort-by #(let [[x y] (:xy %)] x))
-                           (first))
-                left (->> (:nodes g)
-                          (filter #(let [[x y] (:xy-end %)] (and (= y cy) (< x cx))))
-                          (sort-by #(let [[x y] (:xy-end %)] x))
-                          (last))
-                dir (if right -1 1)
-                path (:path (or right left))
-                level (dec (count path))
+  (when (inside-node-box? g (rel-cam g [mx my]) (:tree g))
+    (let [[cx cy] (char-coord-at g [mx my])
+          char (char-at g [cx cy])]
+      (when (or (nil? char) (= " " char))
+        (let [right (->> (:nodes g)
+                         (filter #(let [[x y] (:xy %)] (and (= y cy) (> x cx))))
+                         (sort-by #(let [[x y] (:xy %)] x))
+                         (first))
+              left (->> (:nodes g)
+                        (filter #(let [[x y] (:xy-end %)] (and (= y cy) (< x cx))))
+                        (sort-by #(let [[x y] (:xy-end %)] x))
+                        (last))
+              dir (if right -1 1)
+              path (:path (or right left))
+              level (dec (count path))
 
-                parent (lookup g (butlast path))
-                right (or right (lookup g (update path level inc)))
-                left (or left (lookup g (update path level dec)))
+              parent (lookup g (butlast path))
+              right (or right (lookup g (update path level inc)))
+              left (or left (lookup g (update path level dec)))
 
-                path (update path level + (* dir 0.5))
+              path (update path level + (* dir 0.5))
 
-                xy (if left
-                     (add-x (:xy-end left) 1)
-                     (add-x (:xy parent) 1))
-                xy-end (if right
-                         (add-x (:xy right) -1)
-                         (:xy-end parent))]
-            {:path path
-             :space? true
-             :xy xy
-             :xy-end xy-end}))))))
+              xy (if left
+                   (add-x (:xy-end left) 1)
+                   (add-x (:xy parent) 1))
+              xy-end (if right
+                       (add-x (:xy right) -1)
+                       (:xy-end parent))]
+          {:path path
+           :space? true
+           :xy xy
+           :xy-end xy-end})))))
 
 (defn make
   [string {:keys [xy font-size]}]
