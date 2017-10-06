@@ -68,8 +68,11 @@
 ; precondition: head and anchor are sorted
 (defn selection->node [[a b]]
   (if-not b
-    (when-not (space-path? a)
-      (select-keys (codebox/lookup box a) [:xy :xy-end]))
+    (cond
+      (space-path? a) nil ; space selections are not drawn
+      (char-path? a) (let [xy (char-path->xy a)]
+                       {:xy xy :xy-end xy})
+      :else (select-keys (codebox/lookup box a) [:xy :xy-end]))
     (if (char-path? a)
       {:xy (char-path->xy a)
        :xy-end (char-path->xy b)
