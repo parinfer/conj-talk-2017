@@ -300,6 +300,9 @@
   (when path
     (node-from-path (:tree g) (next path)))) ; ignore first key since we assume top-node))
 
+(defn right-of [[x y]] [(inc x) y])
+(defn left-of [[x y]] [(dec x) y])
+
 (defn pick-space [g [mx my]]
   (setup-font g)
   (let [[x y] (rel-cam g [mx my])]
@@ -317,12 +320,24 @@
                           (last))
                 dir (if right -1 1)
                 path (:path (or right left))
-                path-i (dec (count path))
-                i (path path-i)
-                path (update path path-i + (* dir 0.5))]
+                level (dec (count path))
+
+                parent (lookup g (butlast path))
+                right (or right (lookup g (update path level inc)))
+                left (or left (lookup g (update path level dec)))
+
+                path (update path level + (* dir 0.5))
+
+                xy (if left
+                     (right-of (:xy-end left))
+                     (right-of (:xy parent)))
+                xy-end (if right
+                         (left-of (:xy right))
+                         (:xy-end parent))]
             {:path path
-             :space? true}))))))
-             ; TODO: xy and xy-end
+             :space? true
+             :xy xy
+             :xy-end xy-end}))))))
 
 (defn make
   [string {:keys [xy font-size]}]
