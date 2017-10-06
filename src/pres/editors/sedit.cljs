@@ -5,10 +5,10 @@
     [pres.state :refer [state]]
     [pres.codebox :as codebox]
     [pres.reader :refer [descendant? parent common-ancestor]]
-    [pres.pprint :refer [pprint]]
     [pres.examples :as examples]
     [clojure.string :as string]
-    [oops.core :refer [ocall oget oset!]]))
+    [oops.core :refer [ocall oget oset!]]
+    [clojure.pprint :refer [pprint]]))
 
 ; might be first structure editor with a story for inline editing
 ; new mouse language w/ interesting cursor states
@@ -85,16 +85,16 @@
          (sort-by last))))
 
 (defn normalize-selection [[a b & others]]
-  (let [paths (reduce
-                #(level-paths (cons %2 %1))
-                (level-paths [a b])
-                others)]
-    (if (< (count paths) 2)
-      (vec paths)
-      (let [[a b] [(first paths) (last paths)]
-            a (update a (dec (count a)) Math/ceil)
-            b (update b (dec (count a)) Math/floor)]
-        [a b]))))
+  (if-not b
+    [a]
+    (let [paths (reduce
+                  #(level-paths (cons %2 %1))
+                  (level-paths [a b])
+                  others)
+          [a b] [(first paths) (last paths)]
+          a (update a (dec (count a)) Math/ceil)
+          b (update b (dec (count a)) Math/floor)]
+      [a b])))
 
 (defn normalized-selection [mode]
   (let [{:keys [selections pending-selection]} (get-state)]
@@ -110,24 +110,25 @@
 
 (defn draw-selection [mode]
   (when-let [sel (normalized-selection mode)]
-    (case mode
-      :copy
-      (do
-        (ocall ctx "save")
-        (ocall ctx "translate" 0 2)
-        (ocall ctx "setLineDash" #js[3 1])
-        (oset! ctx "strokeStyle" "#888")
-        (codebox/draw-underline box sel)
-        (ocall ctx "restore"))
+    (let [node (selection->node sel)]
+      (case mode
+        :copy
+        (do
+          (ocall ctx "save")
+          (ocall ctx "translate" 0 2)
+          (ocall ctx "setLineDash" #js[3 1])
+          (oset! ctx "strokeStyle" "#888")
+          (codebox/draw-underline box node)
+          (ocall ctx "restore"))
 
-      :primary
-      (do
-        (oset! ctx "strokeStyle" "#333")
-        (if (:range? sel)
-          (do
-            (codebox/draw-bounding-box box sel)
-            (ocall ctx "stroke"))
-          (codebox/draw-underline box sel))))))
+        :primary
+        (do
+          (oset! ctx "strokeStyle" "#333")
+          (if (:range? node)
+            (do
+              (codebox/draw-bounding-box box node)
+              (ocall ctx "stroke"))
+            (codebox/draw-underline box node)))))))
 
 (defn cursor->char-xy [path]
   (if (char-path? path)
@@ -170,6 +171,7 @@
 ;;----------------------------------------------------------------------
 
 (defn draw []
+  (pprint (get-state))
   (draw-editor box))
 
 ;;----------------------------------------------------------------------
@@ -332,16 +334,19 @@
     (cond
       (#{:left :middle} button)
       (set-state!
-        (cond-> (get-state)
-          true (assoc-in [:selections mode] node)
-          (= mode :primary) (assoc :cursor cursor)))
+        (cond-> (-> (get-state)
+                    (assoc-in [:selections mode] [(:path node)])
+                    (assoc :mousedown button))
+          (= mode :primary)
+          (assoc :cursor cursor)))
 
       (= :right button)
       (when (seq (get-in (get-state) [:selections mode]))
         (set-state!
           (-> (get-state)
-              (assoc :pending-selection node
-                     :cursor nil)))))))
+              (assoc :pending-selection (:path node)
+                     :cursor nil
+                     :mousedown button)))))))
 
 (defn click-info [e]
   {:xy (mouse->cam e)
