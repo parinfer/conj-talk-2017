@@ -116,8 +116,12 @@
         (codebox/draw-bounding-box box sel)
         (codebox/draw-underline box sel)))))
 
-(defn draw-cursor [])
-  ; TODO: draw cursor line if present and mousedown is left or middle
+(defn draw-cursor []
+  (let [{:keys [cursor mousedown]} (get-state)]
+    (when cursor
+      (if mousedown
+        nil ; TODO draw cursor pipe
+        nil)))) ; TODO: draw cursor arrow
 
 (defn draw-editor [box]
   (oset! ctx "fillStyle" "#333")
@@ -291,9 +295,11 @@
           (= mode :primary) (assoc :cursor cursor)))
 
       (= :right button)
-      (set-state!
-        (-> (get-state)
-            (assoc :pending-selection node))))))
+      (when (seq (get-state :selections))
+        (set-state!
+          (-> (get-state)
+              (assoc :pending-selection node
+                     :cursor nil)))))))
 
 (defn click-info [e]
   {:xy (mouse->cam e)
