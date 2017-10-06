@@ -11,7 +11,7 @@
     [oops.core :refer [ocall oget oset!]]))
 
 ; might be first structure editor with a story for inline editing
-; interesting cursor states
+; new mouse language w/ interesting cursor states
 
 ; reminds me of gimp/blender.  (the UX makes the most sense to programmers)
 
@@ -34,7 +34,8 @@
 (def init-state
   {; one selection for each mode
    :selections {} ; one or two paths
-   :pending-selection [] ; one path
+   :cursor nil
+   :pending-selection nil ; one path
    :mode nil ; primary, copy
    :mousedown nil}) ; left, right, middle
 
@@ -89,28 +90,34 @@
                 (level-paths [a b])
                 others)]
     (if (< (count paths) 2)
-      paths
+      (vec paths)
       (let [[a b] [(first paths) (last paths)]
             a (update a (dec (count a)) Math/ceil)
             b (update b (dec (count a)) Math/floor)]
         [a b]))))
+
+(defn normalized-selection [mode]
+  (let [{:keys [selections pending-selection]} (get-state)]
+    (when-let [sel (seq (selections mode))]
+      (normalize-selection
+        (cond-> sel
+          (and (= mode (get-state :mode)) pending-selection)
+          (conj pending-selection))))))
 
 ;;----------------------------------------------------------------------
 ;; Draw Editor
 ;;----------------------------------------------------------------------
 
 (defn draw-selection [mode]
-  (let [{:keys [mode selections]} (get-state)]
-    (when-let [sel (some-> (seq (selections mode))
-                           (normalize-selection)
-                           (selection->node))]
+  (when-let [sel (normalized-selection mode)]
+    (if (= mode :copy)
+      nil ; TODO: draw zigzag underline
       (if (:range? sel)
-        ; draw single (underline)
-        ()
-        ; draw range (in box if primary, underline if copy)
-        ()))))
+        (codebox/draw-bounding-box box sel)
+        (codebox/draw-underline box sel)))))
 
 (defn draw-cursor [])
+  ; TODO: draw cursor line if present and mousedown is left or middle
 
 (defn draw-editor [box]
   (oset! ctx "fillStyle" "#333")
@@ -164,7 +171,7 @@
       {:path (cond opener? first-inner, cursor-left? last-inner, :else next-outer)
        :space? true})))
 
-(defn bordering-paths [space-path]
+(defn bordering-paths [path]
   [(update path (dec (count path)) - 0.5)
    (update path (dec (count path)) + 0.5)])
 
@@ -203,7 +210,7 @@
         (and left? close?) (conj path (- (count (:children node)) 0.5))
         :else nil))))
 
-(defn force-structure-cursor? [space left right [x y]]
+(defn force-structure-cursor? [space-node [x y]]
   ; ( | (    => structure
   ; ( | a
   ; ( | )    => structure
@@ -215,13 +222,14 @@
   ; ) | (    => structure
   ; )<| a    => structure
   ; ) | )    => structure
-  (let [lo? (nil? left)
-        rc? (nil? right)
-        lc? (:paren left)
-        ro? (:paren right)
-        ra? (:text right)
-        la? (:text left)
-        side (region-side (:xy space) (:xy-end space) xy)]
+  (let [[left right] (map #(codebox/lookup box %) (bordering-paths (:path space-node)))
+        lo? (nil? left) ; left open (
+        rc? (nil? right) ; right close )
+        lc? (:paren left) ; left close )
+        ro? (:paren right) ; right open (
+        ra? (:text right) ; right atom
+        la? (:text left) ; left atom
+        side (region-side (:xy space-node) (:xy-end space-node) xy)]
     (or (and lo? ro?)
         (and lo? rc?)
         (and la? ro? (= :right side))
@@ -237,15 +245,15 @@
       (conj (:path node) (- cx (first (:xy node))))
 
       (:space? node)
-      (let [[left right] (map #(codebox/lookup box %) (bordering-paths (:path node)))]
-        (if (force-structure-cursor? node left right [x y])
-          (structure-cursor node [x y])
-          (let [side (if (and (:text left) (:text right))
-                       (region-side (:xy node) (:xy-end node) [x y])
-                       (if (:text left) :left :right))]
-            (case side
-              :left (conj (:path left) (inc (first (:xy-end left))))
-              :right (conj (:path right) 0))))))))
+      (if (force-structure-cursor? node [x y])
+        (structure-cursor node [x y])
+        (let [[left right] (map #(codebox/lookup box %) (bordering-paths (:path node)))
+              side (if (and (:text left) (:text right))
+                     (region-side (:xy node) (:xy-end node) [x y])
+                     (if (:text left) :left :right))]
+          (case side
+            :left (conj (:path left) (count (:text node)))
+            :right (conj (:path right) 0)))))))
 
 (defn pick-edit [box [x y]]
   (when-let [node (pick-node box [x y])]
@@ -269,12 +277,23 @@
 ;;----------------------------------------------------------------------
 
 (defn mouse-down [[x y] button]
-  (let [{:keys [cursor node]}
-        (case button
-          :left (pick-edit box [x y])
-          :right (pick-edit box [x y])
-          :middle (pick-structure box [x y]))]
-    nil))
+  (let [{:keys [cursor node]} (case button
+                                :left (pick-edit box [x y])
+                                :right (pick-edit box [x y])
+                                :middle (pick-structure box [x y])
+                                nil)
+        mode (get-state :mode)]
+    (cond
+      (#{:left :middle} button)
+      (set-state!
+        (cond-> (get-state)
+          true (assoc-in [:selections mode] node)
+          (= mode :primary) (assoc :cursor cursor)))
+
+      (= :right button)
+      (set-state!
+        (-> (get-state)
+            (assoc :pending-selection node))))))
 
 (defn click-info [e]
   {:xy (mouse->cam e)
@@ -284,11 +303,18 @@
   (let [{:keys [xy button]} (click-info e)]
     (mouse-down xy button)))
 
-(defn on-mouse-up [e]
-  ; set selection
-  (set-state! (assoc (get-state) :mousedown nil)))
+(defn on-mouse-move [e]
+  (when-let [button (get-state :mousedown)]
+    (let [{:keys [xy]} (click-info e)]
+      (mouse-down xy button))))
 
-(defn on-mouse-move [e])
+(defn on-mouse-up [e]
+  (let [sel (normalized-selection (get-state :mode))]
+    (set-state!
+      (-> (get-state)
+          (assoc :mousedown nil
+                 :selections sel
+                 :pending-selection nil)))))
 
 (defn on-key-down [e]
   (when (= "Shift" (oget e "key"))
