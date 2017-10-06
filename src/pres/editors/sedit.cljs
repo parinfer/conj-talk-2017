@@ -129,20 +129,17 @@
           (codebox/draw-underline box sel))))))
 
 (defn cursor->char-xy [path]
-  (cond
-    (char-path? path)
+  (if (char-path? path)
     (let [[x y] (:xy (codebox/lookup box (parent path)))]
       [(+ x (last path)) y])
 
-    (space-path? path) nil
-    (let [[left right] (map #(codebox/lookup box %) (bordering-paths path))
+    (let [right (codebox/lookup box path)
+          left (codebox/lookup box (update path (dec (count path)) dec))
           parent-node (codebox/lookup box (parent path))]
       (cond
         (and left right) (codebox/add-x (:xy-end left) 1.5)
         (nil? left) (codebox/add-x (:xy parent-node) 1)
-        (nil? right) (:xy-end parent-node)))
-
-    :else nil))
+        (nil? right) (:xy-end parent-node)))))
 
 (defn draw-cursor []
   (let [{:keys [cursor mousedown]} (get-state)]
@@ -178,9 +175,9 @@
 ;; Picker
 ;;----------------------------------------------------------------------
 
-; NOTE: a cursor is just a path
-; inside text: path to text + char index (cursor to left of index)
-; inside list: path to list + fractional index (same as space path)
+; NOTE: a cursor is just a path (index means cursor is to left of it)
+; inside text: path to text + char index
+; inside list: path to list
 
 ; NOTE: a selection is 1 or 2 paths
 ; edit selection: text path + char index
@@ -212,7 +209,7 @@
       {:path (cond opener? first-inner, cursor-left? last-inner, :else next-outer)
        :space? true})))
 
-(defn bordering-paths [path]
+(defn paths-around-space [path]
   [(update path (dec (count path)) - 0.5)
    (update path (dec (count path)) + 0.5)])
 
@@ -230,7 +227,8 @@
 (defn structure-cursor
   [{:keys [path] :as node} [x y]]
   (cond
-    (:space? node) path
+    (:space? node)
+    (update path (dec (count path)) Math/ceil)
 
     (:text node)
     (let [side (region-side (:xy node) (:xy-end node) [x y])
@@ -263,7 +261,7 @@
   ; ) | (    => structure
   ; )<| a    => structure
   ; ) | )    => structure
-  (let [[left right] (map #(codebox/lookup box %) (bordering-paths (:path space-node)))
+  (let [[left right] (map #(codebox/lookup box %) (paths-around-space (:path space-node)))
         lo? (nil? left) ; left open (
         rc? (nil? right) ; right close )
         lc? (:paren left) ; left close )
@@ -288,7 +286,7 @@
       (:space? node)
       (if (force-structure-cursor? node [x y])
         (structure-cursor node [x y])
-        (let [[left right] (map #(codebox/lookup box %) (bordering-paths (:path node)))
+        (let [[left right] (map #(codebox/lookup box %) (paths-around-space (:path node)))
               side (if (and (:text left) (:text right))
                      (region-side (:xy node) (:xy-end node) [x y])
                      (if (:text left) :left :right))]
