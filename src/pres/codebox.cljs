@@ -203,6 +203,7 @@
 (defn setup-draw [g]
   (setup-font g)
   (ocall ctx "save")
+  (oset! ctx "lineWidth" (/ char-w 5))
   (let [[x y] (:xy g)]
     (ocall ctx "translate" x y)))
 
@@ -271,18 +272,24 @@
   (let [[x y] (code->cam [cx cy])]
     (ocall ctx "moveTo" x y)
     (ocall ctx "lineTo" x (+ y line-h))
+    (oset! ctx "lineWidth" (/ char-w 10))
     (ocall ctx "stroke"))
   (restore))
 
-(defn draw-cursor-arrow [g [cx cy]]
+(defn draw-cursor-arrow [g [cx cy] fill?]
   (setup-draw g)
   (ocall ctx "beginPath")
   (let [[x y] (code->cam [cx cy])
-        s (/ char-w 2)]
-    (ocall ctx "translate" x (+ y line-h s))
-    (ocall ctx "moveTo" (- s) 0)
-    (ocall ctx "lineTo" 0 (* s -2))
-    (ocall ctx "lineTo" s 0))
+        w (* char-w 0.8)
+        h (* w 0.75)]
+    (ocall ctx "translate" x (+ y line-h (* -0.2 h)))
+    (ocall ctx "moveTo" (* -0.5 w) 0)
+    (ocall ctx "lineTo" 0 (- h))
+    (ocall ctx "lineTo" (* 0.5 w) 0)
+    (when fill?
+      (ocall ctx "closePath")
+      (ocall ctx "fill"))
+    (ocall ctx "stroke"))
   (restore))
 
 (defn pick-nodes

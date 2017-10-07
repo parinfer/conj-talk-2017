@@ -159,10 +159,8 @@
             (ocall ctx "stroke"))
           (do
             ; TODO: blink
-            (codebox/draw-cursor-arrow box [x y])
-            (ocall ctx "stroke")
-            (when-not (char-path? cursor)
-              (ocall ctx "fill"))))))))
+            (let [fill? (not (char-path? cursor))]
+              (codebox/draw-cursor-arrow box [x y] fill?))))))))
 
 (defn draw-editor [box]
   (oset! ctx "fillStyle" "#333")
