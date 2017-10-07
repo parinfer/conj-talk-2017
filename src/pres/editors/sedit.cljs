@@ -148,7 +148,7 @@
         (nil? right) (:xy-end parent-node)))))
 
 (defn draw-cursor []
-  (let [{:keys [cursor mousedown mode]} (get-state)]
+  (let [{:keys [cursor mousedown mode blink-on]} (get-state)]
     (when cursor
       (oset! ctx "strokeStyle" "#333")
       (oset! ctx "fillStyle" "#333")
@@ -157,8 +157,7 @@
           (do
             (codebox/draw-cursor box [x y])
             (ocall ctx "stroke"))
-          (do
-            ; TODO: blink
+          (when blink-on
             (let [fill? (not (char-path? cursor))]
               (codebox/draw-cursor-arrow box [x y] fill?))))))))
 
@@ -322,6 +321,29 @@
      :cursor (structure-cursor node [x y])}))
 
 ;;----------------------------------------------------------------------
+;; Animation
+;;----------------------------------------------------------------------
+
+(def blink-duration 300)
+
+(def anim-time 0)
+(defn advance-anim [dt]
+  (set! anim-time (+ anim-time dt))
+  (let [on (even? (Math/floor (/ anim-time blink-duration)))]
+    (when (get-state :cursor)
+      (set-state! (assoc (get-state) :blink-on on)))))
+
+(def should-anim? false)
+(def last-time nil)
+
+(defn tick [t]
+  (let [dt (if last-time (- t last-time) 0)]
+    (set! last-time t)
+    (advance-anim dt)
+    (when should-anim?
+      (ocall js/window "requestAnimationFrame" tick))))
+
+;;----------------------------------------------------------------------
 ;; Mouse
 ;;----------------------------------------------------------------------
 
@@ -334,12 +356,14 @@
         mode (get-state :mode)]
     (cond
       (#{:left :middle} button)
-      (set-state!
-        (cond-> (-> (get-state)
-                    (assoc-in [:selections mode] [(:path node)])
-                    (assoc :mousedown button))
-          (= mode :primary)
-          (assoc :cursor cursor)))
+      (do
+        (set! anim-time 0)
+        (set-state!
+          (cond-> (-> (get-state)
+                      (assoc-in [:selections mode] [(:path node)])
+                      (assoc :mousedown button))
+            (= mode :primary)
+            (assoc :cursor cursor))))
 
       (= :right button)
       (when-let [sel (seq (get-in (get-state) [:selections mode]))]
@@ -404,6 +428,8 @@
 
 (defn init! []
   (set-state! init-state)
+  (set! should-anim? true)
+  (ocall js/window "requestAnimationFrame" tick)
   (ocall js/window "addEventListener" "mousedown" on-mouse-down)
   (ocall js/window "addEventListener" "mouseup" on-mouse-up)
   (ocall js/window "addEventListener" "keydown" on-key-down)
@@ -412,6 +438,7 @@
   (ocall js/window "addEventListener" "contextmenu" on-context-menu))
 
 (defn cleanup! []
+  (set! should-anim? false)
   (ocall js/window "removeEventListener" "mousedown" on-mouse-down)
   (ocall js/window "removeEventListener" "mouseup" on-mouse-up)
   (ocall js/window "removeEventListener" "keydown" on-key-down)
