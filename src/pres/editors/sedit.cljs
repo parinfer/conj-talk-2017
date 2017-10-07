@@ -383,7 +383,10 @@
    :button ([:left :middle :right] (oget e "button"))})
 
 (defn on-mouse-down [e]
-  (let [{:keys [xy button]} (click-info e)]
+  (let [{:keys [xy button]} (click-info e)
+        button (if (and (= button :left) (get-state :middle-click))
+                 :middle
+                 button)]
     (mouse-down xy button)))
 
 (defn on-mouse-move [e]
@@ -404,7 +407,9 @@
 
 (defn on-key-down [e]
   (when (= "Shift" (oget e "key"))
-    (set-state! (assoc (get-state) :mode :copy))))
+    (set-state! (assoc (get-state) :mode :copy)))
+  (when (= "Control" (oget e "key"))
+    (set-state! (assoc (get-state) :middle-click true))))
 
 (defn on-key-up [e]
   (when (= "Shift" (oget e "key"))
@@ -416,7 +421,9 @@
           ; text at the cursor or replace text at primary selection range.
           ; No operations are performed yet, so we discard as it would be after such
           ; an operation.
-          (assoc-in [:selections :copy] nil)))))
+          (assoc-in [:selections :copy] nil))))
+  (when (= "Control" (oget e "key"))
+    (set-state! (assoc (get-state) :middle-click false))))
 
 (defn on-context-menu [e]
   (ocall e "preventDefault"))
