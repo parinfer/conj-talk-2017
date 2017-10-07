@@ -356,14 +356,12 @@
         mode (get-state :mode)]
     (cond
       (#{:left :middle} button)
-      (do
-        (set! anim-time 0)
-        (set-state!
-          (cond-> (-> (get-state)
-                      (assoc-in [:selections mode] [(:path node)])
-                      (assoc :mousedown button))
-            (= mode :primary)
-            (assoc :cursor cursor))))
+      (set-state!
+        (cond-> (-> (get-state)
+                    (assoc-in [:selections mode] [(:path node)])
+                    (assoc :mousedown button))
+          (= mode :primary)
+          (assoc :cursor cursor)))
 
       (= :right button)
       (when-let [sel (seq (get-in (get-state) [:selections mode]))]
@@ -396,6 +394,7 @@
 (defn on-mouse-up [e]
   (let [mode (get-state :mode)
         sel (normalized-selection mode)]
+    (set! anim-time 0)
     (set-state!
       (-> (get-state)
           (assoc-in [:selections mode] sel)
