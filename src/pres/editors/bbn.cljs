@@ -6,6 +6,7 @@
     [pres.codebox :as codebox]
     [pres.reader :refer [print-node path-diff descendant?]]
     [pres.examples :as examples]
+    [pres.colors :as c]
     [clojure.string :as string]
     [oops.core :refer [ocall oget oset!]]))
 
@@ -20,7 +21,7 @@
 ; https://github.com/shaunlebron/history-of-lisp-parens/blob/master/papers/656771.pdf
 (def box-full
   (codebox/make examples/short-func
-    {:xy [580 200]
+    {:xy [380 300]
      :font-size 20}))
 
 (def top-node (:tree box-full))
@@ -28,8 +29,8 @@
 (def box-curr)
 (defn set-box-curr! [node]
   (set! box-curr
-    (codebox/make (print-node node)
-      {:xy [100 200] :font-size 20})))
+    (codebox/make (str " " (print-node node))
+      {:xy [380 200] :font-size 20})))
 
 ;;----------------------------------------------------------------------
 ;; State
@@ -61,15 +62,14 @@
         hover (codebox/lookup box-full path-hover)
         line-h codebox/line-h
         [x y] (:xy box-curr)]
+
       (ocall ctx "save")
       (codebox/setup-font box-curr)
-      (ocall ctx "translate" x (+ y (* 2.5 line-h)))
-      (oset! ctx "globalAlpha" 0.3)
+      (ocall ctx "translate" x (- y line-h))
+      (oset! ctx "fillStyle" c/blur-fill)
       (ocall ctx "fillText" (str "*") 0 0)
       (when-not (= path-curr path-hover)
-        (ocall ctx "fillText" (str " " (when nav (print-cmd nav))) 0 0)
-        (oset! ctx "globalAlpha" 0.6)
-        (ocall ctx "fillText" (str " " (when hover (print-node hover))) 0 line-h))
+        (ocall ctx "fillText" (str " " (when nav (print-cmd nav))) 0 0))
       (ocall ctx "restore")))
 
 (defn update-cursor []
@@ -80,27 +80,32 @@
 (defn draw-box-full []
   (let [{:keys [path-curr path-hover]} (get-state)
         curr (codebox/lookup box-full path-curr)]
-    (oset! ctx "fillStyle" "#CCD")
-    (codebox/draw box-full)
-    (oset! ctx "fillStyle" "#333")
-    (codebox/draw box-full curr)
     (when-let [hover (codebox/lookup box-full path-hover)]
-      (codebox/draw-bounding-box box-full hover)
-      (oset! ctx "strokeStyle" "#000")
-      (ocall ctx "stroke")))
+      (when-not (= hover top-node)
+        (codebox/draw-bounding-box box-full hover)
+        (oset! ctx "strokeStyle" c/highlight-stroke)
+        (ocall ctx "stroke")
+        (oset! ctx "fillStyle" c/highlight-fill)
+        (ocall ctx "fill")))
+    (oset! ctx "fillStyle" c/blur-fill)
+    (codebox/draw box-full)
+    (oset! ctx "fillStyle" c/focus-fill)
+    (codebox/draw box-full curr))
 
  (defn draw-box-curr []
    (let [{:keys [path-curr path-hover]} (get-state)]
-     (oset! ctx "fillStyle" "#333")
-     (codebox/draw box-curr)
      (when (and (descendant? path-hover path-curr)
              (not= path-hover path-curr))
        (let [path (vec (cons 0 (drop (count path-curr) path-hover)))
              hover (codebox/lookup box-curr path)]
          (when hover
            (codebox/draw-bounding-box box-curr hover)
-           (oset! ctx "strokeStyle" "#000")
-           (ocall ctx "stroke")))))))
+           (oset! ctx "strokeStyle" c/highlight-stroke)
+           (ocall ctx "stroke")
+           (oset! ctx "fillStyle" c/highlight-fill)
+           (ocall ctx "fill"))))
+     (oset! ctx "fillStyle" c/focus-fill)
+     (codebox/draw box-curr))))
 
 ;;----------------------------------------------------------------------
 ;; Draw all
