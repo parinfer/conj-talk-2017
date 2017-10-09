@@ -7,6 +7,7 @@
     [pres.reader :refer [print-node path-diff descendant?]]
     [pres.misc :refer [close-paren]]
     [pres.examples :as examples]
+    [pres.colors :as c]
     [clojure.string :as string]
     [oops.core :refer [ocall oget oset!]]))
 
@@ -20,22 +21,22 @@
 ; https://github.com/shaunlebron/history-of-lisp-parens/blob/master/papers/656771.pdf
 (def box-full
   (codebox/make examples/short-func
-    {:xy [580 200]
+    {:xy [300 300]
      :font-size 20}))
 
 (def top-node (:tree box-full))
 
 (defn noko-string [{:keys [paren children]}]
   (string/join "\n"
-    [paren
+    [(str " " paren)
      (string/join "\n" (map #(str "    " (print-node %)) children))
-     (close-paren paren)]))
+     (str " " (close-paren paren))]))
 
 (def box-curr)
 (defn set-box-curr! [node]
   (set! box-curr
     (codebox/make (noko-string node)
-      {:xy [100 200] :font-size 20})))
+      {:xy [300 100] :font-size 20})))
 
 ;;----------------------------------------------------------------------
 ;; State
@@ -86,14 +87,13 @@
 (defn draw-box-full []
   (let [{:keys [path-curr path-hover]} (get-state)
         curr (codebox/lookup box-full path-curr)]
-    (oset! ctx "fillStyle" "#CCD")
+    (oset! ctx "fillStyle" c/blur-fill)
     (codebox/draw box-full)
-    (oset! ctx "fillStyle" "#333")
+    (oset! ctx "fillStyle" c/focus-fill)
     (codebox/draw box-full curr)
     (when-let [hover (codebox/lookup box-full path-hover)]
       (codebox/draw-bounding-box box-full hover)
-      (oset! ctx "strokeStyle" "#000")
-      (ocall ctx "stroke"))))
+      (c/highlight-box))))
 
 (defn draw-box-curr []
   (let [{:keys [path-curr path-hover]} (get-state)]
@@ -107,13 +107,13 @@
             [x y] (:xy box-curr)]
         (when hover
           (codebox/draw-bounding-box box-curr hover)
-          (oset! ctx "strokeStyle" "#000")
-          (ocall ctx "stroke"))
+          (c/highlight-box))
         (when (= 2 (count path))
           (ocall ctx "save")
           (codebox/setup-font box-curr)
           (ocall ctx "translate" x (+ y (* 1.5 line-h)))
-          (ocall ctx "fillText" (str "_") 0 (* (second path) line-h))
+          (oset! ctx "fillStyle" c/focus-fill)
+          (ocall ctx "fillText" (str " _") 0 (* (second path) line-h))
           (ocall ctx "restore"))))))
 
 ;;----------------------------------------------------------------------

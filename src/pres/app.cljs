@@ -61,7 +61,7 @@
   (canvas/transform)
   (canvas/clear)
   (camera/transform)
-  (camera/draw-outline)
+  ; (camera/draw-outline)
   (run-slide :draw)
   (ocall ctx "restore"))
 

@@ -83,10 +83,7 @@
     (when-let [hover (codebox/lookup box-full path-hover)]
       (when-not (= hover top-node)
         (codebox/draw-bounding-box box-full hover)
-        (oset! ctx "strokeStyle" c/highlight-stroke)
-        (ocall ctx "stroke")
-        (oset! ctx "fillStyle" c/highlight-fill)
-        (ocall ctx "fill")))
+        (c/highlight-box)))
     (oset! ctx "fillStyle" c/blur-fill)
     (codebox/draw box-full)
     (oset! ctx "fillStyle" c/focus-fill)
@@ -100,10 +97,7 @@
              hover (codebox/lookup box-curr path)]
          (when hover
            (codebox/draw-bounding-box box-curr hover)
-           (oset! ctx "strokeStyle" c/highlight-stroke)
-           (ocall ctx "stroke")
-           (oset! ctx "fillStyle" c/highlight-fill)
-           (ocall ctx "fill"))))
+           (c/highlight-box))))
      (oset! ctx "fillStyle" c/focus-fill)
      (codebox/draw box-curr))))
 
