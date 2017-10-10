@@ -26,12 +26,12 @@
 ;; Codeboxes
 ;;----------------------------------------------------------------------
 
-(def font-size 12)
+(def font-size 14)
 
 (def boxes
   {:a (codebox/make examples/short-func            {:xy [100 50] :font-size font-size})
-   :b (codebox/make examples/short-interlisp-func  {:xy [380 50] :font-size font-size})
-   :c (codebox/make examples/medium-func           {:xy [640 50] :font-size font-size})
+  ;  :b (codebox/make examples/short-interlisp-func  {:xy [380 50] :font-size font-size})
+   :c (codebox/make examples/medium-func           {:xy [380 50] :font-size font-size})
    :edit-a (codebox/make "(fact (difference x 1))" {:xy [380 300] :font-size font-size})
    :edit-b (codebox/make "(lessp x 3)"             {:xy [380 320] :font-size font-size})})
 
