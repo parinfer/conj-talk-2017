@@ -103,16 +103,16 @@
     (ocall ctx "strokeRect" x y w h)))
 
 (defn draw-bounding []
-  (let [t (get-state :t)
-        all (map #(paren-pos % t) (range num-parens))
-        minx (apply min (map :x all))
-        maxx (apply max (map :x all))
-        miny (apply min (map :y all))
-        maxy (apply max (map :y all))
-        w (+ wpad (- maxx minx))
-        h (+ hpad (- maxy miny))]
-    (oset! ctx "strokeStyle" c/focus-fill)
-    (ocall ctx "strokeRect" minx miny w h)))
+  (when-let [t (#{0 2 3} (get-state :t))]
+    (let [all (map #(paren-pos % t) (range num-parens))
+          minx (apply min (map :x all))
+          maxx (apply max (map :x all))
+          miny (apply min (map :y all))
+          maxy (apply max (map :y all))
+          w (+ wpad (- maxx minx))
+          h (+ hpad (- maxy miny))]
+      (oset! ctx "strokeStyle" c/focus-fill)
+      (ocall ctx "strokeRect" minx miny w h))))
 
 (defn draw []
   (dotimes [i (inc num-parens)]
@@ -124,13 +124,47 @@
 ;;----------------------------------------------------------------------
 ;; Animation
 ;;----------------------------------------------------------------------
+(def anim-time 0)
 
-(def phases []) ; pause transition pause transition, etc
-(defn time->t [t]
-  t)
+(def easing
+  {:linear (fn [t] t)
+   :easeInQuad (fn [t] (* t t))
+   :easeOutQuad (fn [t] (* t (- 2 t)))
+   :easeOutCubic (fn [t] (let [t (dec t)] (+ 1 (* t t t))))})
+
+(def phases
+  [{:i 0 :delay 2000 :duration 400 :ease :easeOutCubic}
+   {:i 1 :delay 0 :duration 1000 :ease :easeOutCubic}
+   {:i 2 :delay 2000 :duration 600 :ease :easeOutCubic}
+   {:i 3 :delay 3000 :duration 0}])
+
+(def total-time
+  (reduce
+    (fn [t {:keys [i delay duration]}]
+      (+ t delay duration))
+    0
+    phases))
+
+(defn time->t []
+  (reduce
+    (fn [t {:keys [i delay duration ease]}]
+      (let [t0 (- t delay)]
+        (cond
+          (<= t0 0)
+          (reduced i)
+
+          (<= t0 duration)
+          (reduced (+ i ((easing ease) (/ t0 duration))))
+
+          :else (- t0 duration))))
+    (js-mod anim-time total-time)
+    phases))
 
 (defn advance-anim [dt]
-  (set-state! (update (get-state) :time + dt)))
+  (set! anim-time (+ anim-time dt))
+  (let [t (time->t)]
+    (set-state!
+      (assoc (get-state) :t t))))
 
 (def last-time nil)
 (def should-anim? false)
@@ -148,7 +182,7 @@
 
 (defn init! []
   (set-state! init-state)
-  (set! should-anim? false)
+  (set! should-anim? true)
   (ocall js/window "requestAnimationFrame" tick))
 
 (defn cleanup! []
