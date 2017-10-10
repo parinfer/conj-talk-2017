@@ -27,7 +27,7 @@
 
 (def init-state
   {:time 0
-   :t 3}) ;; 0 -> 1 -> 2 -> 3
+   :t 0}) ;; 0 -> 1 -> 2 -> 3
 
 (defn get-state
   ([] (get @state state-key))
@@ -53,6 +53,8 @@
 (defn paren-pos* [i t]
   (let [{:keys [x y w h]} (get-box (inc i))]
     (case t
+      -1 {:x x
+          :y y}
       0 {:x (+ x w (- wpad))
          :y (+ y h (* (+ i 2) (- hpad)))}
       1 {:x (+ x w (- wpad))
@@ -90,6 +92,8 @@
     (oset! ctx "textBaseline" "middle")
     (oset! ctx "textAlign" "center")
     (ocall ctx "fillText" ")" x y)
+    (let [{:keys [x y]} (paren-pos i -1)]
+      (ocall ctx "fillText" "(" (+ 1 x) (+ 1 y)))
     (ocall ctx "restore")))
 
 (defn draw-box [i]
