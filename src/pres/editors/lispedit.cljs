@@ -7,6 +7,7 @@
     [pres.reader :refer [print-node path-diff descendant? walk node-from-path]]
     [pres.pprint :refer [pprint]]
     [pres.examples :as examples]
+    [pres.colors :as c]
     [clojure.string :as string]
     [oops.core :refer [ocall oget oset!]]))
 
@@ -39,7 +40,7 @@
   (set! top-pprint (pprint top-node (pprint-limits focus-path)))
   (set! box-curr
     (codebox/make (:pretty top-pprint)
-      {:xy [100 100]
+      {:xy [220 100]
        :font-size 7.5})))
 
 ;;----------------------------------------------------------------------
@@ -72,14 +73,13 @@
 (defn draw-box-full []
   (let [{:keys [path-curr path-hover]} (get-state)
         curr (codebox/lookup box-full path-curr)]
-    (oset! ctx "fillStyle" "#CCD")
+    (oset! ctx "fillStyle" c/blur-fill)
     (codebox/draw box-full)
-    (oset! ctx "fillStyle" "#333")
+    (oset! ctx "fillStyle" c/focus-fill)
     (codebox/draw box-full curr)
     (when-let [hover (codebox/lookup box-full path-hover)]
       (codebox/draw-bounding-box box-full hover)
-      (oset! ctx "strokeStyle" "#000")
-      (ocall ctx "stroke"))))
+      (c/highlight-box))))
 
 (defn pprint-node-for-path? [node path]
   (or (= path (:path node))
@@ -92,18 +92,17 @@
        (:walk-path)))
 
 (defn draw-editor []
-  (oset! ctx "fillStyle" "#CCD")
+  (oset! ctx "fillStyle" c/blur-fill)
   (codebox/draw box-curr)
   (let [{:keys [path-curr path-hover]} (get-state)
         curr (when path-curr (codebox/lookup box-curr (path->pprint-path path-curr)))
         hover (when path-hover (codebox/lookup box-curr (path->pprint-path path-hover)))]
     (when curr
-      (oset! ctx "fillStyle" "#333")
+      (oset! ctx "fillStyle" c/focus-fill)
       (codebox/draw box-curr curr))
     (when hover
       (codebox/draw-bounding-box box-curr hover)
-      (oset! ctx "strokeStyle" "#000")
-      (ocall ctx "stroke"))))
+      (c/highlight-box))))
 
 ;;----------------------------------------------------------------------
 ;; Draw all
