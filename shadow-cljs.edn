@@ -1,5 +1,6 @@
 {:dependencies
- [[binaryage/oops "0.5.6"]]
+ [[binaryage/oops "0.5.6"]
+  [quil "2.6.0"]]
 
  :source-paths
  ["src"]

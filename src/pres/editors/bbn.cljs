@@ -1,17 +1,18 @@
 (ns pres.editors.bbn
   (:require
-    [pres.canvas :refer [ctx]]
-    [pres.camera :refer [mouse->cam] :as camera]
-    [pres.state :refer [state]]
     [pres.codebox :as codebox]
     [pres.reader :refer [print-node path-diff descendant?]]
     [pres.examples :as examples]
     [pres.colors :as c]
     [clojure.string :as string]
-    [oops.core :refer [ocall oget oset!]]))
+    [oops.core :refer [ocall oget oset!]]
+    [quil.core :as q :include-macros true]))
 
 ; built for teletype printers
 ; showed structure in bite-sized pieces
+
+(def w 1000)
+(def h 500)
 
 ;;----------------------------------------------------------------------
 ;; Codeboxes
@@ -31,24 +32,18 @@
   (set! box-curr
     (codebox/make (str " " (print-node node))
       {:xy [380 200] :font-size 20})))
+(set-box-curr! top-node)
 
 ;;----------------------------------------------------------------------
 ;; State
 ;;----------------------------------------------------------------------
-
-(def state-key :bbn)
 
 (def init-state
   {:path-curr [0]
    :path-hover nil
    :nav nil})
 
-(defn get-state
-  ([] (get @state state-key))
-  ([k] (get-in @state [state-key k])))
-
-(defn set-state! [s]
-  (swap! state assoc state-key s))
+(def state (atom init-state))
 
 ;;----------------------------------------------------------------------
 ;; Draw Editor
@@ -58,7 +53,7 @@
  (string/join " " (conj (vec nav) "P")))
 
 (defn draw-editor []
-  (let [{:keys [path-curr path-hover nav]} (get-state)
+  (let [{:keys [path-curr path-hover nav]} @state
         hover (codebox/lookup box-full path-hover)
         line-h codebox/line-h
         [x y] (:xy box-curr)]
@@ -73,12 +68,12 @@
       (ocall ctx "restore")))
 
 (defn update-cursor []
-  (let [{:keys [path-hover]} (get-state)
+  (let [{:keys [path-hover]} @state
         cursor (if path-hover "pointer" "default")]
     (oset! js/document "body.style.cursor" cursor)))
 
 (defn draw-box-full []
-  (let [{:keys [path-curr path-hover]} (get-state)
+  (let [{:keys [path-curr path-hover]} @state
         curr (codebox/lookup box-full path-curr)]
     (when-let [hover (codebox/lookup box-full path-hover)]
       (when-not (= hover top-node)
@@ -90,7 +85,7 @@
     (codebox/draw box-full curr))
 
  (defn draw-box-curr []
-   (let [{:keys [path-curr path-hover]} (get-state)]
+   (let [{:keys [path-curr path-hover]} @state]
      (when (and (descendant? path-hover path-curr)
              (not= path-hover path-curr))
        (let [path (vec (cons 0 (drop (count path-curr) path-hover)))
@@ -115,15 +110,14 @@
 ;; Mouse
 ;;----------------------------------------------------------------------
 
-(defn on-mouse-down [e]
-  (let [{:keys [path-curr path-hover nav]} (get-state)
+(defn mouse-pressed []
+  (let [{:keys [path-curr path-hover nav]} @state
         hover (codebox/lookup box-full path-hover)]
     (when hover
       (set-box-curr! hover)
-      (set-state!
-        (-> (get-state)
-            (assoc :path-curr path-hover)
-            (dissoc :path-hover :nav))))))
+      (reset! state (-> @state
+                        (assoc :path-curr path-hover)
+                        (dissoc :path-hover :nav))))))
 
 (defn pick-node [code [x y]]
   (->> (codebox/pick-nodes code [x y])
@@ -131,28 +125,30 @@
        (sort-by #(count (:path %)))
        (last)))
 
-(defn on-mouse-move [e]
-  (let [[x y] (mouse->cam e)
-        {:keys [path-curr path-hover]} (get-state)
+(defn mouse-moved []
+  (let [[x y] [(q/mouse-x) (q/mouse-y)]
+        {:keys [path-curr path-hover]} @state
         new-path-hover (or (:path (pick-node box-full [x y]))
                          (when-let [node (pick-node box-curr [x y])]
                            (vec (concat path-curr (next (:path node))))))]
     (when-not (= new-path-hover path-hover)
-      (set-state!
-        (-> (get-state)
-            (assoc :path-hover new-path-hover
-                   :nav (when new-path-hover (path-diff path-curr new-path-hover))))))))
+      (swap! state assoc
+        :path-hover new-path-hover
+        :nav (when new-path-hover (path-diff path-curr new-path-hover))))))
 
 ;;----------------------------------------------------------------------
-;; Load
+;; Main
 ;;----------------------------------------------------------------------
 
-(defn init! []
-  (set-box-curr! top-node)
-  (set-state! init-state)
-  (ocall js/window "addEventListener" "mousedown" on-mouse-down)
-  (ocall js/window "addEventListener" "mousemove" on-mouse-move))
+(defn setup []
+  (q/no-loop))
 
-(defn cleanup! []
-  (ocall js/window "removeEventListener" "mousedown" on-mouse-down)
-  (ocall js/window "removeEventListener" "mousemove" on-mouse-move))
+(q/defsketch bbn
+  :host "bbn-canvas"
+  :setup setup
+  :draw draw
+  :mouse-moved mouse-moved
+  :mouse-pressed mouse-pressed
+  :size [w h])
+
+(add-watch state :redraw #(q/redraw))
