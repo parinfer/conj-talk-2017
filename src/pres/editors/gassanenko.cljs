@@ -72,28 +72,35 @@
     {:x (+ x (* t dx))
      :y (+ y (* t dy))}))
 
-(defn paren-pos [i t]
-  (let [t0 (Math/floor t)
-        t1 (Math/ceil t)]
-    (if (= t0 t1)
-      (paren-pos* i t0)
-      (interp-pos
-        (paren-pos* i t0)
-        (paren-pos* i t1)
-        (- t t0)))))
+(defn paren-pos
+  ([i t]
+   (paren-pos i i t))
+  ([i j t]
+   (let [t0 (Math/floor t)
+         t1 (Math/ceil t)]
+     (if (= t0 t1)
+       (paren-pos* j t0)
+       (interp-pos
+         (paren-pos* i t0)
+         (paren-pos* j t1)
+         (- t t0))))))
 
 (defn draw-paren [i]
   (let [{:keys [t]} (get-state)
-        {:keys [x y]} (paren-pos i t)]
+        swap? (> t 2)
+        j (if swap? (- (dec num-parens) i) i)
+        {:keys [x y]} (paren-pos i j t)]
     (ocall ctx "save")
     (ocall ctx "translate" (+ 0.5 (* 0.5 wpad)) (+ -0.5 (* 0.5 hpad)))
     (oset! ctx "fillStyle" c/focus-fill)
     (oset! ctx "font" (str "bold " (* 0.6 hpad) "px Menlo"))
     (oset! ctx "textBaseline" "middle")
     (oset! ctx "textAlign" "center")
-    (ocall ctx "fillText" ")" x y)
-    (let [{:keys [x y]} (paren-pos i -1)]
-      (ocall ctx "fillText" "(" (+ 1 x) (+ 1 y)))
+    (let [open (["(" "[" "{"] i)
+          close ([")" "]" "}"] i)]
+      (ocall ctx "fillText" close x y)
+      (let [{:keys [x y]} (paren-pos i i -1)]
+        (ocall ctx "fillText" open (+ 1 x) (+ 1 y))))
     (ocall ctx "restore")))
 
 (defn draw-box [i]
