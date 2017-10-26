@@ -1,2 +1,5 @@
 body {
 }
+canvas {
+  outline: 0;
+}
