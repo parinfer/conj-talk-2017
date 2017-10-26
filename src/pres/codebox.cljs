@@ -3,8 +3,7 @@
     [pres.canvas :refer [ctx]]
     [pres.camera :refer [mouse->cam] :as camera]
     [pres.reader :refer [read walk node-from-path]]
-    [pres.misc :refer [close-paren]]
-    [oops.core :refer [ocall oget oset!]]))
+    [pres.misc :refer [close-paren]]))
 
 ;; Coord naming conventions:
 ;;   x/y = cam coords (relative to box)
@@ -23,16 +22,15 @@
 (def underline-pad 0.1) ; distance of underline from line bottom (in fraction of char-h)
 
 (defn use-font! [h]
-  (oset! ctx "font" (str h "px Menlo"))
-  (oset! ctx "textBaseline" "middle")
-  (oset! ctx "textAlign" "left"))
+  (q/text-font "Menlo" 12)
+  (q/text-align :left :center))
 
 (def get-char-w
   (memoize
     (fn [h]
       (use-font! h)
       (let [text "abcdef"
-            text-width (oget (ocall ctx "measureText" text) "width")]
+            text-width (q/text-width text)]
         (/ text-width (count text))))))
 
 (defn set-font-size! [size]
@@ -186,7 +184,7 @@
 (defn draw-text [text pos]
   (let [[x y] (code->cam pos)
         fy (+ y (* 0.5 line-h))]
-    (ocall ctx "fillText" text x fy)))
+    (q/text text x fy)))
 
 (defn draw* [g {:keys [paren text xy xy-end children]}]
    (cond
@@ -202,32 +200,27 @@
 
 (defn setup-draw [g]
   (setup-font g)
-  (ocall ctx "save")
-  (oset! ctx "lineWidth" (/ char-w 5))
+  (q/push-matrix)
+  (q/stroke-weight (/ char-w 5))
   (let [[x y] (:xy g)]
-    (ocall ctx "translate" x y)))
+    (q/translate x y)))
 
 (defn restore []
-  (ocall ctx "restore"))
+  (q/pop-matrix))
 
 (defmulti draw-shape (fn [[name & coords]] name))
 (defmethod draw-shape :rect [[_name x y w h]]
-  (ocall ctx "beginPath")
-  (ocall ctx "rect" x y w h))
+  (q/rect x y w h))
 (defmethod draw-shape :crect [[_name x0 y0 x1 y1 x2 y2 x3 y3]]
-  (ocall ctx "beginPath")
-  (ocall ctx "moveTo" x0 y0)
+  (q/begin-shape)
   (let [pairs (if (= x0 x3)
-                [[x2 y0] [x2 y2] [x1 y2] [x1 y1] [x0 y1]]
-                [[x2 y0] [x2 y2] [x1 y2] [x1 y1] [x3 y1] [x3 y3] [x0 y3]])]
+                [[x0 y0] [x2 y0] [x2 y2] [x1 y2] [x1 y1] [x0 y1]]
+                [[x0 y0] [x2 y0] [x2 y2] [x1 y2] [x1 y1] [x3 y1] [x3 y3] [x0 y3]])]
     (doseq [[x y] pairs]
-      (ocall ctx "lineTo" x y)))
-  (ocall ctx "closePath"))
+      (q/vertex x y)))
+  (q/end-shape :close))
 (defmethod draw-shape :line [[_name x0 y0 x1 y1]]
-  (ocall ctx "beginPath")
-  (ocall ctx "moveTo" x0 y0)
-  (ocall ctx "lineTo" x1 y1)
-  (ocall ctx "stroke"))
+  (q/line x0 y0 x1 y1))
 
 (defn draw-bounding-box* [g node]
   (draw-shape (code-shape->cam (node->box-shape g node))))
@@ -268,28 +261,22 @@
 
 (defn draw-cursor [g [cx cy]]
   (setup-draw g)
-  (ocall ctx "beginPath")
+  (q/stroke-weight (/ char-w 10))
   (let [[x y] (code->cam [cx cy])]
-    (ocall ctx "moveTo" x y)
-    (ocall ctx "lineTo" x (+ y line-h))
-    (oset! ctx "lineWidth" (/ char-w 10))
-    (ocall ctx "stroke"))
+    (q/line x y x (+ y line-h)))
   (restore))
 
 (defn draw-cursor-arrow [g [cx cy] fill?]
   (setup-draw g)
-  (ocall ctx "beginPath")
   (let [[x y] (code->cam [cx cy])
         w (* char-w 0.8)
         h (* w 0.75)]
-    (ocall ctx "translate" x (+ y line-h (* -0.2 h)))
-    (ocall ctx "moveTo" (* -0.5 w) 0)
-    (ocall ctx "lineTo" 0 (- h))
-    (ocall ctx "lineTo" (* 0.5 w) 0)
-    (when fill?
-      (ocall ctx "closePath")
-      (ocall ctx "fill"))
-    (ocall ctx "stroke"))
+    (q/with-translation x (+ y line-h (* -0.2 h))
+      (q/begin-shape)
+      (q/vertex (* -0.5 w) 0)
+      (q/vertex 0 (- h))
+      (q/vertex (* 0.5 w) 0)
+      (q/end-shape (when fill? :close))))
   (restore))
 
 (defn pick-nodes

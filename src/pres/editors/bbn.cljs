@@ -5,7 +5,7 @@
     [pres.examples :as examples]
     [pres.colors :as c]
     [clojure.string :as string]
-    [oops.core :refer [ocall oget oset!]]
+    [oops.core :refer [oset!]]
     [quil.core :as q :include-macros true]))
 
 ; built for teletype printers
@@ -58,14 +58,13 @@
         line-h codebox/line-h
         [x y] (:xy box-curr)]
 
-      (ocall ctx "save")
       (codebox/setup-font box-curr)
-      (ocall ctx "translate" x (- y line-h))
-      (oset! ctx "fillStyle" c/blur-fill)
-      (ocall ctx "fillText" (str "*") 0 0)
-      (when-not (= path-curr path-hover)
-        (ocall ctx "fillText" (str " " (when nav (print-cmd nav))) 0 0))
-      (ocall ctx "restore")))
+      (q/with-translation [x (- y line-h)]
+        (apply q/fill c/blur-fill)
+        (q/no-stroke)
+        (q/text "*" 0 0)
+        (when-not (= path-curr path-hover)
+          (q/text (str " " (when nav (print-cmd nav))) 0 0)))))
 
 (defn update-cursor []
   (let [{:keys [path-hover]} @state
@@ -79,9 +78,10 @@
       (when-not (= hover top-node)
         (codebox/draw-bounding-box box-full hover)
         (c/highlight-box)))
-    (oset! ctx "fillStyle" c/blur-fill)
+    (q/no-stroke)
+    (apply q/fill c/blur-fill)
     (codebox/draw box-full)
-    (oset! ctx "fillStyle" c/focus-fill)
+    (apply q/fill c/focus-fill)
     (codebox/draw box-full curr))
 
  (defn draw-box-curr []
@@ -93,7 +93,8 @@
          (when hover
            (codebox/draw-bounding-box box-curr hover)
            (c/highlight-box))))
-     (oset! ctx "fillStyle" c/focus-fill)
+     (apply q/fill c/focus-fill)
+     (q/no-stroke)
      (codebox/draw box-curr))))
 
 ;;----------------------------------------------------------------------
