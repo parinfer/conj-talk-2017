@@ -1,0 +1,8 @@
+{
+  "dependencies": {
+    "processing-js": "1.6.4"
+  },
+  "devDependencies": {
+    "shadow-cljs": "^2.0.42"
+  }
+}

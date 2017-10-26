@@ -1,9 +1,8 @@
 (ns pres.codebox
   (:require
-    [pres.canvas :refer [ctx]]
-    [pres.camera :refer [mouse->cam] :as camera]
     [pres.reader :refer [read walk node-from-path]]
-    [pres.misc :refer [close-paren]]))
+    [pres.misc :refer [close-paren]]
+    [quil.core :as q :include-macros true]))
 
 ;; Coord naming conventions:
 ;;   x/y = cam coords (relative to box)

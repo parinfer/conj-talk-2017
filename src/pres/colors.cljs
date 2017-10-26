@@ -1,7 +1,5 @@
 (ns pres.colors
   (:require
-    [pres.canvas :refer [ctx]]
-    [oops.core :refer [ocall oget oset!]]
     [quil.core :as q :include-macros true]))
 
 ;; add a common palette in case we need to change all of them quickly
