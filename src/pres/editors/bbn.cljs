@@ -102,6 +102,7 @@
 ;;----------------------------------------------------------------------
 
 (defn draw []
+  (q/background 255)
   (draw-box-full)
   (draw-box-curr)
   (draw-editor)
@@ -144,9 +145,12 @@
 (defn setup []
   (q/no-loop))
 
+(defn settings [])
+
 (q/defsketch bbn
   :host "bbn-canvas"
   :setup setup
+  :settings settings
   :draw draw
   :mouse-moved mouse-moved
   :mouse-pressed mouse-pressed
