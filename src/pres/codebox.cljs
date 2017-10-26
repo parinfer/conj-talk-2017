@@ -20,8 +20,16 @@
 
 (def underline-pad 0.1) ; distance of underline from line bottom (in fraction of char-h)
 
+(def fonts (atom {}))
+
+(defn get-font [name h]
+  (or (get @fonts [name h])
+      (let [font (q/create-font name h)]
+        (swap! fonts assoc [name h] font)
+        font)))
+
 (defn use-font! [h]
-  (q/text-font "Menlo" 12)
+  (q/text-font (get-font "Menlo" h))
   (q/text-align :left :center))
 
 (def get-char-w
