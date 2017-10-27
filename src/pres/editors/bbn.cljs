@@ -76,8 +76,8 @@
         curr (codebox/lookup box-full path-curr)]
     (when-let [hover (codebox/lookup box-full path-hover)]
       (when-not (= hover top-node)
-        (codebox/draw-bounding-box box-full hover)
-        (c/highlight-box)))
+        (c/highlight-box)
+        (codebox/draw-bounding-box box-full hover)))
     (q/no-stroke)
     (apply q/fill c/blur-fill)
     (codebox/draw box-full)
@@ -91,8 +91,8 @@
        (let [path (vec (cons 0 (drop (count path-curr) path-hover)))
              hover (codebox/lookup box-curr path)]
          (when hover
-           (codebox/draw-bounding-box box-curr hover)
-           (c/highlight-box))))
+           (c/highlight-box)
+           (codebox/draw-bounding-box box-curr hover))))
      (apply q/fill c/focus-fill)
      (q/no-stroke)
      (codebox/draw box-curr))))
